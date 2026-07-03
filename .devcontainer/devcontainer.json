@@ -1,6 +1,6 @@
 {
     "name": "FreeRTOS + UVM-SystemC Verification",
     "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
-    "postCreateCommand": "bash .devcontainer/sutup.sh",
+    "postCreateCommand": "bash .devcontainer/setup.sh",
     "forwardPorts": [22]
 }
