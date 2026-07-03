@@ -68,3 +68,6 @@ vcpkg_installed/
 Testing/
 .cache/
 FreeRTOS/
+systemc/ 
+uvm-systemc/ 
+test_uvm* 
