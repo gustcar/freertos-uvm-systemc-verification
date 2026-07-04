@@ -5,6 +5,7 @@
 #define NUM_TASKS           5
 #define LOOPS_PER_TASK      10000
 #define STRESS_RUNS         100
+#define STACK_SIZE_WORDS    512
 
 // Task priorities (higher = more urgent)
 #define PRIORITY_ALARM      4
