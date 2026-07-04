@@ -71,3 +71,9 @@ FreeRTOS/
 systemc/ 
 uvm-systemc/ 
 test_uvm* 
+
+# IDE / Editor
+.vscode/
+*.swp
+*~
+.DS_Store
