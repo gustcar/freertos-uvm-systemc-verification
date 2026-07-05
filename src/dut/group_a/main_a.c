@@ -5,7 +5,7 @@
 
 int main(void) {
     printf("============================================\n"  );
-    printf("  Environmental Multi-Sensor Controller\n".      );
+    printf("  Environmental Multi-Sensor Controller\n"       );
     printf("  Group A — Vulnerable (no protection)\n"        );
     printf("============================================\n\n");
 
