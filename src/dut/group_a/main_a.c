@@ -40,13 +40,26 @@ int main(void) {
         );
     }
 
-    /* Test HAL initialization (stub for now) */
-    printf("[HAL] hal_init(MODE_STANDALONE) → TODO (Step 2)\n");
-    /* hal_init(MODE_STANDALONE); */  /* TODO: uncomment after Step 2 */
+    // Test HAL initialization
+    printf("[HAL] [HAL] Initializing in MODE_NORMAL...\n");
+    hal_init(MODE_NORMAL);
+
+    float temp = hal_adc_read(ADC_CH_TEMP);
+    float hum  = hal_adc_read(ADC_CH_HUMIDITY);
+    printf("[HAL] ADC temp=%.1f°C  humidity=%.1f%%\n", temp, hum);
+
+    hal_pwm_set(PWM_CH_FAN, 50);
+    hal_gpio_write(GPIO_PIN_PUMP, true);
+    printf(
+        "[HAL] GPIO pump=%d  led_status=%d\n",
+        hal_gpio_read(GPIO_PIN_PUMP),
+        hal_gpio_read(GPIO_PIN_LED_STATUS)
+    );
+
+    hal_log_write("test log entry\n", 15);
 
     printf("\n============================================\n");
-    printf("  Headers validated.\n");
-    printf("  Next: Step 2 — HAL implementation\n");
+    printf("  HAL validated.\n");
     printf("============================================\n");
 
     return 0;

@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include "hal.h"
 #include <stdio.h>
 #include <time.h>
@@ -9,7 +10,7 @@ static hal_adc_read_cb_t     adc_cb         = NULL;
 static hal_pwm_set_cb_t      pwm_cb         = NULL;
 static hal_gpio_write_cb_t   gpio_write_cb  = NULL;
 static hal_gpio_read_cb_t    gpio_read_cb   = NULL;
-static hal_uart_receive_cb_t uart_cb        = NULL;
+static hal_uart_rx_cb_t      uart_cb        = NULL;
 static hal_log_write_cb_t    log_write_cb   = NULL;
 
 static sim_mode_t current_mode = MODE_NORMAL;
@@ -36,7 +37,7 @@ void hal_register_gpio(hal_gpio_write_cb_t write_cb, hal_gpio_read_cb_t read_cb)
     gpio_write_cb = write_cb;
     gpio_read_cb = read_cb;
 }
-void hal_register_uart(hal_uart_receive_cb_t callback) {
+void hal_register_uart(hal_uart_rx_cb_t callback) {
     uart_cb = callback;
 }
 void hal_register_log(hal_log_write_cb_t callback) {
@@ -102,15 +103,15 @@ int hal_uart_rx(uint8_t *buf, uint16_t len) {
     return 0;
 }
 
-// Flash: writes to stdout in normal mode
+// Log: writes to stdout in normal mode
 int hal_log_write(const char *data, uint16_t len) {
     if (log_write_cb) {
         return log_write_cb(data, len);
     }
 
     /* Default POSIX stub: print to stdout */
-    if (current_mode == MODE_STANDALONE) {
-        printf("[HAL FLASH] %.*s", (int)len, data);
+    if (current_mode == MODE_NORMAL) {
+        printf("[HAL LOG] %.*s", (int)len, data);
     }
     return (int)len;
 }
@@ -123,5 +124,9 @@ uint32_t hal_get_tick_ms(void) {
 }
 
 void hal_delay_ms(uint32_t ms) {
-    usleep(ms * 1000);
+    struct timespec ts = {
+        .tv_sec  = ms / 1000,
+        .tv_nsec = (ms % 1000) * 1000000L
+    };
+    nanosleep(&ts, NULL);
 }
