@@ -1,5 +1,5 @@
 CC		:= gcc
-CFLAGS	:= -std=c17 -Wall -Wextra -02 -g -Isrc -Isrc/dut/common -Isrc/hal
+CFLAGS	:= -std=c17 -Wall -Wextra -O2 -g -Isrc -Isrc/dut/common -Isrc/hal
 
 BUILD_DIR := build
 
