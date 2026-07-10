@@ -2,6 +2,7 @@
 #include "config.h"
 #include "types.h"
 #include "hal.h"
+#include "shared_data_a.h"
 
 int main(void) {
     printf("============================================\n"  );
@@ -57,6 +58,24 @@ int main(void) {
     );
 
     hal_log_write("test log entry\n", 15);
+
+    // Test shared data
+    printf("\n[SHARED] Reseting shared data...\n");
+    shared_data_reset();
+
+    printf(
+        "[SHARED] temperature=%.1f humidity=%.1f\n",
+        sensor_data.temperature,
+        sensor_data.humidity
+    );
+    printf(
+        "[SHARED] target=%.1f pump=%d fan=%d alarm=%d enabled=%d\n",
+        target,
+        actuators.pump_on,
+        actuators.fan_duty,
+        alarm_state,
+        system_enabled
+    );
 
     printf("\n============================================\n");
     printf("  HAL validated.\n");
