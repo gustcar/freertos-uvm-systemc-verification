@@ -16,7 +16,7 @@
 
 // Targets and limits (Temperature and humidity)
 #define TEMP_TARGET_DEFAULT     25.0f // Celsius
-#define TEMP_WARNING_LIMIT      35.0f
+#define TEMP_ALARM_LIMIT        35.0f
 #define TEMP_CRITICAL_LIMIT     40.0f
 #define HUMIDITY_TARGET_DEFAULT 50.0f // %
 #define HUMIDITY_MIN_LIMIT      30.0f
