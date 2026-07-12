@@ -37,14 +37,14 @@ void control_task(void) {
         // Fan control
         if (error > FAN_TEMP_TOLERANCE) {
             // Temperature too high -> Max Fan
-            calculated_fan_duty = FAN_DUTY_MAX;
+            calculated_fan_duty = FAN_SPEED_MAX;
         } else if (error < -FAN_TEMP_TOLERANCE) {
             // Temperature too low -> Min Fan
-            calculated_fan_duty = FAN_DUTY_MIN;
+            calculated_fan_duty = FAN_SPEED_MIN;
         } else {
             // Applies simple proportional control based on error
             calculated_fan_duty = (uint8_t)(fabsf(error) * 5.0f); 
-            if (calculated_fan_duty > FAN_DUTY_MAX) calculated_fan_duty = FAN_DUTY_MAX;
+            if (calculated_fan_duty > FAN_SPEED_MAX) calculated_fan_duty = FAN_SPEED_MAX;
         }
 
         // Pump control - low humidity turns on the pump

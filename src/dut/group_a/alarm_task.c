@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdlib.h>
 #include "config.h"
 #include "types.h"
 #include "hal.h"
