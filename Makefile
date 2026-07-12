@@ -10,7 +10,7 @@ all: build-a
 
 SRC_HAL			:= src/hal/hal.c
 SRC_SHARED_A	:= src/dut/group_a/shared_data_a.c
-SRC_TASKS_A		:= src/dut/group_a/sensor_task.c
+SRC_TASKS_A		:= src/dut/group_a/sensor_task.c src/dut/group_a/control_task.c src/dut/group_a/comm_task.c src/dut/group_a/alarm_task.c src/dut/group_a/logger_task.c
 SRC_DUT_A		:= src/dut/group_a/main_a.c
 
 # Group A (vulnerable)
