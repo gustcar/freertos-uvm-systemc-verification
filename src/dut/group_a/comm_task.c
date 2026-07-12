@@ -6,6 +6,7 @@
 // Protection: NONE (Group A — vulnerable)
 // ============================================================
 #include <stdint.h>
+#include <stdlib.h>
 #include "config.h"
 #include "types.h"
 #include "hal.h"
@@ -16,10 +17,9 @@ void comm_task(void) {
     alarm_level_t current_alarm;
     uint8_t uart_buf[SERIAL_BUFFER_SIZE];
     command_t cmd;
-    float new_target;
 
     for (int i = 0; i < LOOPS_PER_TASK; i++) {
-        // VULNERABLE READ
+        // VULNERABLE READ - race condition with sensor_task / alarm_task
         current_temp = sensor_data.temperature;
         current_alarm = alarm_state;
 
@@ -33,26 +33,35 @@ void comm_task(void) {
                 case 0: // CMD_TARGET
                     cmd.type = CMD_TARGET;
                     cmd.value = (float)(20 + (rand() % 20)); // range: 20 - 40 Celsius
+
                     if(system_enabled) {
-                        target = cmd.value;
+                        // Refuse temperature change during critical alarm
+                        if(current_alarm != ALARM_CRITICAL) {
+                            target = cmd.value;
+                        }
                     }
                     break;
                 case 1: // CMD_ENABLE
                     cmd.type = CMD_ENABLE;
+                    // Vulnerable write
                     system_enabled = true;
                     break;
                 case 2: // CMD_DISABLE
                     cmd.type = CMD_DISABLE;
-                    system_enabled = false;
+                    // Refuse disable if temperature is too high
+                    if(current_temp < TEMP_ALARM_LIMIT) {
+                        system_enabled = false;
+                    }
                     break;
                 case 3: // CMD_RESET
                     cmd.type = CMD_RESET;
+                    // Vulnerable write
                     target = TEMP_TARGET_DEFAULT;
                     system_enabled = true;
                     break;
             }
         }
-
+        // Random delay
         if(rand() % 4 == 0) { hal_delay_ms(rand() % 3); }
     }
 }
