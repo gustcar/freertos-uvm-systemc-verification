@@ -1,85 +1,88 @@
+#include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
 #include "config.h"
 #include "types.h"
 #include "hal.h"
 #include "shared_data_a.h"
 
+static pthread_t tasks[NUM_TASKS];
+
+typedef struct {
+    int task_id;
+    const char* name;
+    int priority;
+    void (*task_func)(void);
+} task_arg_t;
+
+static void* thread_wrapper(void* aux) {
+    task_arg_t* task_arg = (task_arg_t*)aux;
+    task_arg->task_func();
+    return NULL;
+}
+
+// Task function declarations
+extern void sensor_task(void);
+extern void control_task(void);
+extern void comm_task(void);
+extern void alarm_task(void);
+extern void logger_task(void);
+
 int main(void) {
+    task_arg_t task_args[NUM_TASKS];
+    pthread_attr_t attr;
+    int thread_create_result;
+
     printf("============================================\n"  );
     printf("  Environmental Multi-Sensor Controller\n"       );
     printf("  Group A — Vulnerable (no protection)\n"        );
     printf("============================================\n\n");
 
-    /* Print configuration */
-    printf(
-        "[CONFIG] NUM_TASKS=%d  LOOPS=%d  STRESS_RUNS=%d\n",
-        NUM_TASKS, LOOPS_PER_TASK, STRESS_RUNS
-    );
-    printf(
-        "[CONFIG] Stack=%d words  Cache line=%d bytes\n\n",
-        STACK_SIZE_WORDS, CACHE_LINE_SIZE
-    );
-
-    /* Validate type sizes — critical for false-sharing analysis */
-    printf("[TYPES] sizeof(sensor_data_t)         = %zu bytes\n", sizeof(sensor_data_t));
-    printf("[TYPES] sizeof(sensor_data_aligned_t) = %zu bytes\n", sizeof(sensor_data_aligned_t));
-    printf("[TYPES] sizeof(actuator_state_t)      = %zu bytes\n", sizeof(actuator_state_t));
-    printf("[TYPES] sizeof(command_t)             = %zu bytes\n", sizeof(command_t));
-    printf("[TYPES] sizeof(log_t)                 = %zu bytes\n\n", sizeof(log_t));
-
-    /* Verify false-sharing hypothesis */
-    if (sizeof(sensor_data_t) < CACHE_LINE_SIZE) {
-        printf(
-            "[CHECK] sensor_data_t (%zuB) < cache line (%dB) → FALSE SHARING POSSIBLE\n",
-            sizeof(sensor_data_t), CACHE_LINE_SIZE
-        );
-    }
-    if (sizeof(sensor_data_aligned_t) == CACHE_LINE_SIZE) {
-        printf(
-            "[CHECK] sensor_data_aligned_t (%zuB) = cache line (%dB) → FALSE SHARING MITIGATED\n\n",
-            sizeof(sensor_data_aligned_t), CACHE_LINE_SIZE
-        );
-    }
-
-    // Test HAL initialization
-    printf("[HAL] [HAL] Initializing in MODE_NORMAL...\n");
     hal_init(MODE_NORMAL);
-
-    float temp = hal_adc_read(ADC_CH_TEMP);
-    float hum  = hal_adc_read(ADC_CH_HUMIDITY);
-    printf("[HAL] ADC temp=%.1f°C  humidity=%.1f%%\n", temp, hum);
-
-    hal_pwm_set(PWM_CH_FAN, 50);
-    hal_gpio_write(GPIO_PIN_PUMP, true);
-    printf(
-        "[HAL] GPIO pump=%d  led_status=%d\n",
-        hal_gpio_read(GPIO_PIN_PUMP),
-        hal_gpio_read(GPIO_PIN_LED_STATUS)
-    );
-
-    hal_log_write("test log entry\n", 15);
-
-    // Test shared data
-    printf("\n[SHARED] Reseting shared data...\n");
     shared_data_reset();
 
-    printf(
-        "[SHARED] temperature=%.1f humidity=%.1f\n",
-        sensor_data.temperature,
-        sensor_data.humidity
-    );
-    printf(
-        "[SHARED] target=%.1f pump=%d fan=%d alarm=%d enabled=%d\n",
-        target,
-        actuators.pump_on,
-        actuators.fan_duty,
-        alarm_state,
-        system_enabled
-    );
+    printf("[MAIN] Starting %d concurrent tasks...\n", NUM_TASKS);
+    printf("[MAIN] Expected behavior: RACE CONDITIONS\n\n");
+
+    // Task definitions - struct task_arg_t initialization
+    // task_id, name, priority, function_pointer
+    task_args[0] = (task_arg_t){0, "alarm_task", PRIORITY_ALARM, alarm_task};
+    task_args[1] = (task_arg_t){1, "sensor_task", PRIORITY_SENSOR, sensor_task};
+    task_args[2] = (task_arg_t){2, "control_task", PRIORITY_CONTROL, control_task};
+    task_args[3] = (task_arg_t){3, "comm_task", PRIORITY_COMM, comm_task};
+    task_args[4] = (task_arg_t){4, "logger_task", PRIORITY_LOGGER, logger_task};
+
+    pthread_attr_init(&attr);
+    
+    for(int i = 0; i < NUM_TASKS; i++) {
+        printf("[MAIN] Creating %s (priority=%d)\n", task_args[i].name, task_args[i].priority);
+        
+        thread_create_result = pthread_create(&tasks[i], &attr, thread_wrapper, &task_args[i]);
+        if(thread_create_result != 0) {
+            fprintf(stderr, "[ERROR] Failed to create %s: %s\n", task_args[i].name, strerror(thread_create_result));
+            return EXIT_FAILURE;
+        }
+    }
+
+    printf("\n[MAIN] All threads created. Running %d iterations...\n", LOOPS_PER_TASK);
+
+    // Wait for all threads to complete
+    for(int i = 0; i < NUM_TASKS; i++) {
+        pthread_join(tasks[i], NULL);
+        printf("[MAIN] %s completed\n", task_args[i].name);
+    }
+
+    // Print results.
+    printf("\n[MAIN] Final shared state:\n");
+    printf("\n  temperature=%.2f  humidity=%.2f\n", sensor_data.temperature, sensor_data.humidity);
+    printf("\n  temperature target=%.2f  pump=%d  fan_duty=%u\n", target, actuators.pump_on, actuators.fan_duty);
+    printf("\n  alarm_state=%d  system enabled=%d\n", alarm_state, system_enabled);
 
     printf("\n============================================\n");
-    printf("  HAL validated.\n");
+    printf("  Group A completed\n");
     printf("============================================\n");
 
-    return 0;
+    pthread_attr_destroy(&attr);
+    return EXIT_SUCCESS;
 }
