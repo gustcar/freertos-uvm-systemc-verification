@@ -36,6 +36,7 @@ void comm_task(void) {
                 case CMD_RESET:
                     target_temp = TEMP_TARGET_DEFAULT;
                     system_enabled = true;
+                    break;
                 default:
                     break;
             }
