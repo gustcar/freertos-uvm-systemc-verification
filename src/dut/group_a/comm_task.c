@@ -1,8 +1,7 @@
 // ============================================================
 // comm_task.c — Communication Task
 // Priority: 1 (low)
-// Writes: target, system_enabled
-// Reads: sensor_data.temperature, alarm_state
+// Writes: target_temp, system_enabled
 // Protection: NONE (Group A — vulnerable)
 // ============================================================
 #include <stdint.h>
