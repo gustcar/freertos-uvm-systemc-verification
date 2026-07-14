@@ -12,7 +12,7 @@
 // ============================================================
  
 volatile sensor_data_t     sensor_data;
-volatile float             target;
+volatile float             target_temp;
 volatile actuator_state_t  actuators;
 volatile alarm_level_t     alarm_state;
 volatile bool              system_enabled;

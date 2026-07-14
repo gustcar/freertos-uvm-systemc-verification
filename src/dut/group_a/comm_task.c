@@ -7,57 +7,37 @@
 // ============================================================
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "config.h"
 #include "types.h"
 #include "hal.h"
 #include "shared_data_a.h"
 
 void comm_task(void) {
-    float current_temp;
-    alarm_level_t current_alarm;
-    uint8_t uart_buf[SERIAL_BUFFER_SIZE];
-    command_t cmd;
-
+    uint8_t uart_buffer[SERIAL_BUFFER_SIZE];
+    command_t command;
+    int bytes;
+    
     for (int i = 0; i < LOOPS_PER_TASK; i++) {
-        // VULNERABLE READ - race condition with sensor_task / alarm_task
-        current_temp = sensor_data.temperature;
-        current_alarm = alarm_state;
+        bytes = hal_uart_rx(uart_buffer, SERIAL_BUFFER_SIZE);
 
-        // Simulate receiving commands (10% probability per iteration)
-        if (rand() % 10 == 0) {
-            hal_uart_rx(uart_buf, SERIAL_BUFFER_SIZE);
-            
-            int rand_cmd = rand() % 4;
+        if(bytes > 0) {
+            memcpy(&command, uart_buffer, sizeof(command_t));
 
-            switch(rand_cmd) {
-                case 0: // CMD_TARGET
-                    cmd.type = CMD_TARGET;
-                    cmd.value = (float)(20 + (rand() % 20)); // range: 20 - 40 Celsius
-
-                    if(system_enabled) {
-                        // Refuse temperature change during critical alarm
-                        if(current_alarm != ALARM_CRITICAL) {
-                            target = cmd.value;
-                        }
-                    }
+            switch (command.type) {
+                case CMD_TARGET:
+                    target_temp = command.value;
                     break;
-                case 1: // CMD_ENABLE
-                    cmd.type = CMD_ENABLE;
-                    // Vulnerable write
+                case CMD_ENABLE:
                     system_enabled = true;
                     break;
-                case 2: // CMD_DISABLE
-                    cmd.type = CMD_DISABLE;
-                    // Refuse disable if temperature is too high
-                    if(current_temp < TEMP_ALARM_LIMIT) {
-                        system_enabled = false;
-                    }
+                case CMD_DISABLE:
+                    system_enabled = false;
                     break;
-                case 3: // CMD_RESET
-                    cmd.type = CMD_RESET;
-                    // Vulnerable write
-                    target = TEMP_TARGET_DEFAULT;
+                case CMD_RESET:
+                    target_temp = TEMP_TARGET_DEFAULT;
                     system_enabled = true;
+                default:
                     break;
             }
         }

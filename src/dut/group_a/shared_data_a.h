@@ -16,7 +16,7 @@
 extern volatile sensor_data_t sensor_data;
 
 // Written by comm_task, read by control_task
-extern volatile float target;
+extern volatile float target_temp;
 
 // Written by control_task
 extern volatile actuator_state_t actuators;
