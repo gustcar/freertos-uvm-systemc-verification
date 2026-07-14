@@ -20,7 +20,7 @@ volatile bool              system_enabled;
 void shared_data_reset(void) {
     sensor_data.temperature = 0.0f;
     sensor_data.humidity    = 0.0f;
-    target                  = TEMP_TARGET_DEFAULT;
+    target_temp             = TEMP_TARGET_DEFAULT;
     actuators.pump_on       = false;
     actuators.fan_duty      = 0;
     alarm_state             = ALARM_NORMAL;
