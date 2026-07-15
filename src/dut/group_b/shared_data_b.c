@@ -1,6 +1,3 @@
-#include "shared_data_b.h"
-#include "config.h"
-
 // ============================================================
 // shared_data_b.c — Definitions (Group B: mutex-protected)
 //
@@ -9,6 +6,9 @@
 // because pthread_mutex_lock/unlock provide memory barriers.
 // Uses sensor_data_aligned_t (64 bytes) to prevent false sharing.
 // ============================================================
+
+#include "shared_data_b.h"
+#include "config.h"
 
 sensor_data_aligned_t  sensor_data;
 float                  target_temp;
