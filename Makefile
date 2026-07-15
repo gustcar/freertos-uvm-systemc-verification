@@ -20,13 +20,13 @@ SRC_TASKS_A		:= src/dut/group_a/sensor_task.c \
 SRC_DUT_A		:= src/dut/group_a/main_a.c
 
 # Group B (protected)
-SRC_SHARED_B	:= src/dut/group_a/shared_data_b.c
-SRC_TASKS_B		:= src/dut/group_a/sensor_task_safe.c \
-				   src/dut/group_a/control_task_safe.c \
-				   src/dut/group_a/comm_task_safe.c \
-				   src/dut/group_a/alarm_task_safe.c \
-				   src/dut/group_a/logger_task_safe.c
-SRC_DUT_B		:= src/dut/group_a/main_b.c
+SRC_SHARED_B	:= src/dut/group_b/shared_data_b.c
+SRC_TASKS_B		:= src/dut/group_b/sensor_task_safe.c \
+				   src/dut/group_b/control_task_safe.c \
+				   src/dut/group_b/comm_task_safe.c \
+				   src/dut/group_b/alarm_task_safe.c \
+				   src/dut/group_b/logger_task_safe.c
+SRC_DUT_B		:= src/dut/group_b/main_b.c
 
 # Group A (vulnerable)
 build-a: $(BUILD_DIR)/group_a.elf
