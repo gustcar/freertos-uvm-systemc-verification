@@ -40,6 +40,7 @@ int main(void) {
     printf("============================================\n\n");
 
     hal_init(MODE_NORMAL);
+    srand(42);
     shared_data_reset();
 
     printf("[MAIN] Starting %d concurrent tasks...\n", NUM_TASKS);
@@ -74,10 +75,12 @@ int main(void) {
     }
 
     // Print results.
-    printf("\n[MAIN] Final shared state:\n");
-    printf("\n  temperature=%.2f  humidity=%.2f\n", sensor_data.temperature, sensor_data.humidity);
-    printf("\n  temperature target=%.2f  pump=%d  fan_duty=%u\n", target_temp, actuators.pump_on, actuators.fan_duty);
-    printf("\n  alarm_state=%d  system enabled=%d\n", alarm_state, system_enabled);
+    printf("\n[FINAL] All threads completed.\n");
+    printf("[FINAL] temp=%.2f  humidity=%.2f\n",
+           sensor_data.temperature, sensor_data.humidity);
+    printf("[FINAL] setpoint=%.2f  pump=%d  fan=%d  alarm=%d  enabled=%d\n",
+           target_temp, actuators.pump_on, actuators.fan_duty,
+           alarm_state, system_enabled);
 
     printf("\n============================================\n");
     printf("  Group A completed\n");
