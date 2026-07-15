@@ -15,17 +15,24 @@
 
 void sensor_task_safe(void) {
     for (int i = 0; i < LOOPS_PER_TASK; i++) {
-        float temperature_read = hal_adc_read(ADC_CH_TEMP);
-        float humidity_read    = hal_adc_read(ADC_CH_HUMIDITY);
-        float temp_noise       = ((float)(rand() % 100) / 100.0f) - 0.5f;
-        float hum_noise        = ((float)(rand() % 100) / 100.0f) - 0.5f;
-
-        // Protected write
         pthread_mutex_lock(&mutex_sensor);
-        sensor_data.temperature = temperature_read + temp_noise;
-        sensor_data.humidity    = humidity_read + hum_noise;
+        sensor_data.temperature = hal_adc_read(ADC_CH_TEMP);
+        sensor_data.humidity = hal_adc_read(ADC_CH_HUMIDITY);
         pthread_mutex_unlock(&mutex_sensor);
 
+#if 0  // UVM-SystemC noise injection mode
+       float temperature_read = hal_adc_read(ADC_CH_TEMP);
+       float humidity_read    = hal_adc_read(ADC_CH_HUMIDITY);
+
+       float temp_noise       = ((float)(rand() % 100) / 100.0f) - 0.5f;
+       float hum_noise        = ((float)(rand() % 100) / 100.0f) - 0.5f;
+
+       // PROTECTED WRITE — mutex ensures atomic access
+       pthread_mutex_lock(&mutex_sensor);
+       sensor_data.temperature = temperature_read + temp_noise;
+       sensor_data.humidity    = humidity_read + hum_noise;  
+       pthread_mutex_unlock(&mutex_sensor);
+#endif
         if (rand() % 2 == 0) hal_delay_ms(rand() % 5);
     }
 }
