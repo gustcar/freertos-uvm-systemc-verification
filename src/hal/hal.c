@@ -95,11 +95,24 @@ bool hal_gpio_read(uint8_t pin) {
 
 // UART: no-op in normal mode (returns 0 bytes)
 int hal_uart_rx(uint8_t *buf, uint16_t len) {
+    command_t command;
     if (uart_cb) {
         return uart_cb(buf, len);
     }
-
-    /* Default POSIX stub: no commands in normal mode */
+    
+    // Default POSIX stub: 10% chance to inject a command */
+    if (rand() % 10 == 0 && len >= sizeof(command_t)) {
+        switch (rand() % 4) {
+            case 0: command.type = CMD_TARGET;
+                    command.value = TEMP_TARGET_DEFAULT + ((float)(rand() % 100) / 10.0f) - 5.0f;
+                    break;
+            case 1: command.type = CMD_ENABLE;   command.value = 0; break;
+            case 2: command.type = CMD_DISABLE;  command.value = 0; break;
+            case 3: command.type = CMD_RESET;    command.value = 0; break;
+        }
+        memcpy(buf, &command, sizeof(command_t));
+        return sizeof(command_t);
+    }
     return 0;
 }
 
