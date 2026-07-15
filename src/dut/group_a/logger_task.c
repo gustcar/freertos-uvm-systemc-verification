@@ -15,44 +15,34 @@
 
 
 void logger_task(void) {
-    uint32_t tick_count;
-    log_t log_entry;
-    char log_buffer[64];
+    log_t log;
+    char log_buffer[128];
     int log_len;
 
     for (int i = 0; i < LOOPS_PER_TASK; i++) {
+        log.tick = hal_get_tick_ms();
         // VULNERABLE READ OF ALL VARIABLES
-        // This is a consistency checker: if race conditions exist,
-        // the snapshot may capture impossible states (e.g., temp updated but humidity old)
+        log.temp = sensor_data.temperature;
+        log.humidity = sensor_data.humidity;
+        log.pump_on = actuators.pump_on;
+        log.fan_duty = actuators.fan_duty;
+        log.alarm_level = (uint8_t)alarm_state;
 
-        tick_count = hal_get_tick_ms();
-        log_entry.tick = tick_count;
-        
-        // Read all shared data (no lock!)
-        log_entry.temp = sensor_data.temperature;
-        log_entry.humidity = sensor_data.humidity;
-        log_entry.pump_on = actuators.pump_on;
-        log_entry.fan_duty = actuators.fan_duty;
-        log_entry.alarm_level = alarm_state;
-
-        // Format log entry as ASCII (for visibility)
-        log_len = snprintf(
-            log_buffer, sizeof(log_buffer),
-            "[LOG] tick=%u temp=%.1f hum=%.1f pump=%d fan=%u alarm=%d\n",
-            (unsigned)log_entry.tick,
-            log_entry.temp,
-            log_entry.humidity,
-            log_entry.pump_on ? 1 : 0,
-            log_entry.fan_duty,
-            log_entry.alarm_level
-        );
-
-        // Write to flash (vulnerable write path)
-        hal_log_write(log_buffer, (uint16_t)log_len);
-
-        // Infrequent logging (every ~50 iterations to reduce I/O overhead)
-        if (rand() % 50 == 0) {
-            hal_delay_ms(1);  // Minimal delay
+        if (i % 100 == 0) {
+            log_len = snprintf(
+                log_buffer,
+                sizeof(log_buffer),
+                "[LOG] tick=%u T=%.1f H=%.1f pump=%d fan=%d alarm=%d\n",
+                log.tick,
+                log.temp,
+                log.humidity,
+                log.pump_on ? 1 : 0,
+                log.fan_duty,
+                log.alarm_level
+            );
+            hal_log_write(log_buffer, (uint16_t)log_len);
         }
+
+        if (rand() % 5 == 0) hal_delay_ms(rand() % 4);
     }
 }
