@@ -47,6 +47,8 @@ int main(void) {
     // Initialize HAL
     hal_init(MODE_NORMAL);
 
+    srand(42);
+
     // Initialize mutexes BEFORE creating threads
     shared_data_init_mutexes();
 
