@@ -1,3 +1,10 @@
+// ============================================================
+// logger_task.c — Logger task (Group A: vulnerable)
+//
+// Priority 0 (idle+) — reads all variables for logging.
+// NO protection — race conditions expected.
+// ============================================================
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,17 +13,7 @@
 #include "hal.h"
 #include "shared_data_a.h"
 
-/**
- * @brief Logger Task (Priority 0 - Idle+)
- * 
- * Responsibilities:
- * 1. Periodically reads ALL shared variables to create consistency snapshot
- * 2. Writes log entry to persistent storage via HAL flash
- * 3. Reads without any synchronization (maximum vulnerability exposure)
- * 
- * Note: Lowest priority. Runs during idle times, maximizing chance to catch 
- *       inconsistent states created by concurrent writes from other tasks.
- */
+
 void logger_task(void) {
     uint32_t tick_count;
     log_t log_entry;
