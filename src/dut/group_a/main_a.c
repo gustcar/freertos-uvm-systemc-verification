@@ -76,7 +76,7 @@ int main(void) {
     // Print results.
     printf("\n[MAIN] Final shared state:\n");
     printf("\n  temperature=%.2f  humidity=%.2f\n", sensor_data.temperature, sensor_data.humidity);
-    printf("\n  temperature target=%.2f  pump=%d  fan_duty=%u\n", target, actuators.pump_on, actuators.fan_duty);
+    printf("\n  temperature target=%.2f  pump=%d  fan_duty=%u\n", target_temp, actuators.pump_on, actuators.fan_duty);
     printf("\n  alarm_state=%d  system enabled=%d\n", alarm_state, system_enabled);
 
     printf("\n============================================\n");

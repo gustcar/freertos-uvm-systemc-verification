@@ -29,7 +29,7 @@ void control_task(void) {
         current_humidity = sensor_data.humidity;
         
         // Can be concurrently modified by comm_task
-        target_setpoint = target;
+        target_setpoint = target_temp;
 
         // Control logic
         error = current_temperature - target_setpoint;
