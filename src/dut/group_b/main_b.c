@@ -98,5 +98,5 @@ int main(void) {
     printf("  Group B execution complete.\n");
     printf("============================================\n");
 
-    return 0;
+    return EXIT_SUCCESS;
 }
