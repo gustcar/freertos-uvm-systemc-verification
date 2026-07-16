@@ -66,26 +66,17 @@ $(BUILD_DIR):
 
 # --- UVM-SystemC Testbench ---
 CXX := g++
-CXXFLAGS := -std=c++17 -Wall -Wextra -O2 -g \
-            -Isrc -Isrc/dut/common -Isrc/hal \
-            -I/usr/local/include \
-            $(shell pkg-config --cflags systemc 2>/dev/null || echo "")
+CXXFLAGS := -std=c++17 -Wall -Wextra -O0 -g \
+            -Isrc -Isrc/dut/common -Isrc/hal -Itb \
+            -I/usr/local/include -I/usr/local/include/uvmsc
 
-LDFLAGS := -L/usr/local/lib-linux64 \
-           -lsystemc -luvm-systemc -lpthread
+SYSLIB   := -L/usr/local/lib -L/usr/local/lib-linux64 \
+            -lsystemc -luvm-systemc -lpthread
 
-TB_SRC := tb/sc_main.cpp
-BUILD_TB := build/testbench.elf
+$(BUILD_DIR)/tb.elf: tb/sc_main.cpp | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(SYSLIB)
 
-.PHONY: build-tb run-tb clean-tb
-
-build-tb: $(BUILD_TB)
-
-$(BUILD_TB): $(TB_SRC) | $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS)
-
+.PHONY: build-tb
+build-tb: $(BUILD_DIR)/tb.elf
 run-tb: build-tb
-	./$(BUILD_TB)
-
-clean-tb:
-	rm -f $(BUILD_TB)
+	./$(BUILD_DIR)/tb.elf

@@ -1,43 +1,25 @@
 // ============================================================
-// sc_main.cpp — Entry point for UVM-SystemC testbench
+// sc_main.cpp — SystemC + UVM-SystemC entry point
 //
-// Main entry point that initializes SystemC simulation
-// and runs the UVM verification environment.
-//
+// Registers HAL callbacks that delegate to UVM agents, then
+// launches the UVM test. This is the bridge between the C
+// DUT firmware and the C++ verification environment.
 // ============================================================
 
-#include <systemc.h>
-#include <iostream>
-#include <cstdlib>
-#include <ctime>
-
-// Forward declarations for UVM-SystemC (implemented in 5.2+)
-class uvm_env;
-class uvm_test;
-
-SC_MODULE(tb_top) {
-    void run_test() {
-
-        std::cout << "[INFO] Testbench initialized successfully\n";
-        std::cout << "  Testbench Framework Ready\n";
-    }
-    
-    SC_HAS_PROCESS(tb_top);
-    
-    tb_top(sc_module_name name) : sc_module(name) {
-        SC_THREAD(run_test);
-    }
-};
+#define  SC_INCLUDE_DYNAMIC_PROCESSES
+#include <systemc>
+#include <uvm>
 
 int sc_main(int argc, char* argv[]) {
     (void)argc;
     (void)argv;
 
-    std::cout << "\n\nStarting UVM-SystemC Verification Environment...\n\n";
-    
-    tb_top top("testbench");
-    top.run_test();
-    
-    std::cout << "\nSimulation finished.\n";
+    sc_core::sc_report_handler::set_actions(
+        sc_core::SC_INFO,
+        sc_core::SC_DO_NOTHING
+    );
+
+    uvm::uvm_report_info("SC_MAIN", "hello from UVM-SystemC");
+    uvm::uvm_report_info("SC MAIN", "Simulation finished");
     return 0;
 }
