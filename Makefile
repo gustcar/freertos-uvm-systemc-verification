@@ -63,3 +63,29 @@ help:
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
+
+# --- UVM-SystemC Testbench ---
+CXX := g++
+CXXFLAGS := -std=c++17 -Wall -Wextra -O2 -g \
+            -Isrc -Isrc/dut/common -Isrc/hal \
+            -I/usr/local/include \
+            $(shell pkg-config --cflags systemc 2>/dev/null || echo "")
+
+LDFLAGS := -L/usr/local/lib-linux64 \
+           -lsystemc -luvm-systemc -lpthread
+
+TB_SRC := tb/sc_main.cpp
+BUILD_TB := build/testbench.elf
+
+.PHONY: build-tb run-tb clean-tb
+
+build-tb: $(BUILD_TB)
+
+$(BUILD_TB): $(TB_SRC) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS)
+
+run-tb: build-tb
+	./$(BUILD_TB)
+
+clean-tb:
+	rm -f $(BUILD_TB)
