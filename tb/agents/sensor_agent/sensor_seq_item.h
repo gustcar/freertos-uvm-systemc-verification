@@ -24,6 +24,7 @@ public:
     }
 
     virtual bool do_compare(const uvm::uvm_object& rhs, const uvm::uvm_comparer* comparer = nullptr) const override {
+        (void)comparer; // Unused parameter
         const sensor_seq_item& aux = dynamic_cast<const sensor_seq_item&>(rhs);
         return (temperature == aux.temperature) && (humidity == aux.humidity);
     }
