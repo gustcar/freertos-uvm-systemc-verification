@@ -14,10 +14,10 @@
 
 int sc_main(int argc, char* argv[]) {
 
-    sc_core::sc_report_handler::set_actions(
-        sc_core::SC_INFO,
-        sc_core::SC_DO_NOTHING
-    );
+    // sc_core::sc_report_handler::set_actions(
+    //     sc_core::SC_INFO,
+    //     sc_core::SC_DO_NOTHING
+    // );
 
     UVM_INFO("SC_MAIN", "Running UVM-SystemC test", uvm::UVM_NONE);
     
