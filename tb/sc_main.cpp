@@ -19,7 +19,7 @@ int sc_main(int argc, char* argv[]) {
         sc_core::SC_DO_NOTHING
     );
 
-    uvm::uvm_report_info("SC_MAIN", "Running UVM-SystemC test");
+    UVM_INFO("SC_MAIN", "Running UVM-SystemC test", uvm::UVM_NONE);
     
     std::string test_name = "base_test";
     if(argc > 1) test_name = argv[1];
