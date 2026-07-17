@@ -5,6 +5,7 @@
 #ifndef BASE_TEST_H
 #define BASE_TEST_H
 
+#include <systemc>
 #include <uvm>
 #include "../env/env.h"
 
@@ -14,7 +15,7 @@ public:
 
     env* m_env;
 
-    explicit base_test(const char* name = "base_test")
+    explicit base_test(uvm::uvm_component_name name = "base_test")
         : uvm::uvm_test(name), m_env(nullptr) {}
 
     virtual void build_phase(uvm::uvm_phase& phase) override {
