@@ -86,4 +86,5 @@ run-tb: build-tb
 .PHONY: check-headers
 check-headers:
 	$(CXX) $(CXXFLAGS) -fsyntax-only -Isrc -Isrc/dut/common -Isrc/hal -Itb \
-	    -I/usr/local/include tb/agents/sensor_agent/sensor_driver.h
+	    -I/usr/local/include tb/agents/sensor_agent/sensor_driver.h tb/agents/sensor_agent/sensor_monitor.h \
+		tb/agents/sensor_agent/sensor_sequencer.h tb/agents/sensor_agent/sensor_seq_item.h
