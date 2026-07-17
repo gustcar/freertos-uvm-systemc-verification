@@ -73,8 +73,10 @@ CXXFLAGS := -std=c++17 -Wall -Wextra -O0 -g \
 SYSLIB   := -L/usr/local/lib -L/usr/local/lib-linux64 \
             -lsystemc -luvm-systemc -lpthread
 
-$(BUILD_DIR)/tb.elf: tb/sc_main.cpp | $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) -o $@ $< $(SYSLIB)
+TB_SRCS	 := tb/sc_main.cpp tb/env/env.cpp
+
+$(BUILD_DIR)/tb.elf: $(TB_SRCS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -o $@ $(TB_SRCS) $(SYSLIB)
 
 .PHONY: build-tb
 build-tb: $(BUILD_DIR)/tb.elf
