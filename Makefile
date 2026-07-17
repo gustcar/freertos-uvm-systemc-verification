@@ -82,3 +82,8 @@ $(BUILD_DIR)/tb.elf: $(TB_SRCS) | $(BUILD_DIR)
 build-tb: $(BUILD_DIR)/tb.elf
 run-tb: build-tb
 	./$(BUILD_DIR)/tb.elf
+
+.PHONY: check-headers
+check-headers:
+	$(CXX) $(CXXFLAGS) -fsyntax-only -Isrc -Isrc/dut/common -Isrc/hal -Itb \
+	    -I/usr/local/include tb/agents/sensor_agent/sensor_driver.h
