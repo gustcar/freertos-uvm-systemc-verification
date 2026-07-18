@@ -90,4 +90,5 @@ check-headers:
 		tb/agents/sensor_agent/sensor_sequencer.h tb/agents/sensor_agent/sensor_seq_item.h \
 		tb/agents/sensor_agent/sensor_agent.h tb/agents/comm_agent/comm_driver.h tb/agents/comm_agent/comm_monitor.h \
 		tb/agents/comm_agent/comm_sequencer.h tb/agents/comm_agent/comm_seq_item.h tb/agents/comm_agent/comm_agent.h \
-		tb/agents/actuator_agent/actuator_seq_item.h tb/agents/actuator_agent/actuator_monitor.h tb/agents/actuator_agent/actuator_agent.h
+		tb/agents/actuator_agent/actuator_seq_item.h tb/agents/actuator_agent/actuator_monitor.h tb/agents/actuator_agent/actuator_agent.h \
+		tb/coverage/coverage_bins.h
