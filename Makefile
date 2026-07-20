@@ -92,6 +92,6 @@ check-headers:
 		tb/agents/comm_agent/comm_sequencer.h tb/agents/comm_agent/comm_seq_item.h tb/agents/comm_agent/comm_agent.h \
 		tb/agents/actuator_agent/actuator_seq_item.h tb/agents/actuator_agent/actuator_monitor.h tb/agents/actuator_agent/actuator_agent.h \
 		tb/coverage/coverage_bins.h tb/checker/data_integrity_checker.h tb/checker/timing_checker.h \
-		tb/checker/deadlock_detector.h tb/scoreboard/concurrency_sb.h
-		
+		tb/checker/deadlock_detector.h tb/scoreboard/concurrency_sb.h \
+		tb/sequences/base_seq.h tb/sequences/race_condition_seq.h tb/sequences/priority_inversion_seq.h
 
