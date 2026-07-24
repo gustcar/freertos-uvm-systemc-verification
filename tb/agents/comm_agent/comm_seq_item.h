@@ -1,11 +1,13 @@
 // ============================================================
 // comm_seq_item.h — Sequence item for UART command transactions
+// Represents commands: TARGET, ENABLE, DISABLE, RESET
 // ============================================================
 
 #ifndef COMM_SEQ_ITEM_H
 #define COMM_SEQ_ITEM_H
 
 #include <uvm>
+#include <sstream>
 
 class comm_seq_item : public uvm::uvm_sequence_item {
 public:
@@ -20,6 +22,7 @@ public:
           command_value(0.0f) {}
         
     void do_copy(const uvm::uvm_object& rhs) override {
+        uvm::uvm_sequence_item::do_copy(rhs);
         const comm_seq_item& item = dynamic_cast<const comm_seq_item&>(rhs);
         command_type = item.command_type;
         command_value = item.command_value;
