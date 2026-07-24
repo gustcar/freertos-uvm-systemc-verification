@@ -1,6 +1,7 @@
 // ============================================================
-// sensor_monitor.h — Monitors sensor readings from HAL globals
-// Passively observes DUT activity for scoreboard consumption
+// sensor_monitor.h — Monitors sensor transactions from DUT
+// Captures temperature/hunidity readings with RTOS metadata
+// and forwards to scoreboard + coverage
 // ============================================================
 
 #ifndef SENSOR_MONITOR_H
@@ -27,13 +28,21 @@ public:
         // Passive observer — no objection needed
     }
 
-    void sample_and_send(float temperature, float humidity) {
-        sensor_seq_item* seq_item = new sensor_seq_item("sensor_sample");
+    void sample_and_send(float temperature, float humidity, unsigned int timestamp_ns = 0, int task_priority = 0, unsigned int task_id =0) {
+        sensor_seq_item* seq_item = sensor_seq_item::type_id::create("sensor_sample");
         seq_item->temperature = temperature;
         seq_item->humidity = humidity;
+        seq_item->timestamp_ns = timestamp_ns;
+        seq_item->task_priority = task_priority;
+        seq_item->task_id = task_id;
 
-        UVM_INFO("MON", "Sampled sensor values: temperature=" + std::to_string(seq_item->temperature) +
-                 ", humidity=" + std::to_string(seq_item->humidity), uvm::UVM_LOW);
+        UVM_INFO(
+            "MON",
+            "Sampled sensor values: temperature=" + std::to_string(seq_item->temperature) +
+            ", humidity=" + std::to_string(seq_item->humidity) +
+            ", timestamp=" + std::to_string(seq_item->timestamp_ns),
+            uvm::UVM_LOW
+        );
 
         analysis_port.write(seq_item);
     }
