@@ -1,5 +1,7 @@
 // ============================================================
-// comm_monitor.h — Monitors UART command transactions
+// comm_monitor.h — Monitors UART command transactions from DUT
+// Captures UART commands snet by comm_task with payload and
+// forwards to scoreboard + coverage via analysis_port
 // ============================================================
 
 #ifndef COMM_MONITOR_H
@@ -27,7 +29,7 @@ public:
     }
 
     void sample_and_send(unsigned int command_type, float command_value) {
-        comm_seq_item* seq_item = new comm_seq_item("comm_sample");
+        comm_seq_item* seq_item = comm_seq_item::type_id::create("comm_sample");
         seq_item->command_type = command_type;
         seq_item->command_value = command_value;
 
