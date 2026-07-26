@@ -18,9 +18,7 @@ public:
 
     actuator_monitor(uvm::uvm_component_name name = "actuator_monitor")
         : uvm::uvm_monitor(name),
-          analysis_port("analysis_port") {
-            seq_item = new actuator_seq_item("pwm_observation");
-          }
+          analysis_port("analysis_port") {}
 
     void run_phase(uvm::uvm_phase& phase) {
         (void)phase;  // Suppress unused parameter warning
