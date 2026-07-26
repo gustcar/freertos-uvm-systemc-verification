@@ -26,7 +26,7 @@ public:
         sensor_seq_item* seq_item = nullptr;
 
         while (true) {
-            this->seq_item_port->get_next_item(*seq_item);
+            this->seq_item_port->get_next_item(seq_item);
 
             drv_temperature = seq_item->temperature;
             drv_humidity = seq_item->humidity;
