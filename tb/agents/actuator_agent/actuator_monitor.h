@@ -14,11 +14,13 @@ class actuator_monitor : public uvm::uvm_monitor {
 public:
     UVM_COMPONENT_UTILS(actuator_monitor);
 
-    uvm::uvm_analysis_port<uvm::uvm_object*> analysis_port;
+    uvm::uvm_analysis_port<actuator_seq_item*> analysis_port;
 
     actuator_monitor(uvm::uvm_component_name name = "actuator_monitor")
         : uvm::uvm_monitor(name),
-          analysis_port("analysis_port") {}
+          analysis_port("analysis_port") {
+            seq_item = new actuator_seq_item("pwm_observation");
+          }
 
     void run_phase(uvm::uvm_phase& phase) {
         (void)phase;  // Suppress unused parameter warning
@@ -29,7 +31,7 @@ public:
 
     void observe_pwm(unsigned int channel, unsigned int duty_cycle) {
         // Create a new sequence item for PWM observation
-        actuator_seq_item* seq_item = new actuator_seq_item("pwm_observation");
+        actuator_seq_item* seq_item = actuator_seq_item::type_id::create("pwm_observation");
         seq_item->type = actuator_seq_item::PWM;
         seq_item->pwm_channel = channel;
         seq_item->pwm_duty_cycle = duty_cycle;
