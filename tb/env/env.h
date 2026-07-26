@@ -7,16 +7,53 @@
 
 #include <systemc>
 #include <uvm>
+#include "../agents/sensor_agent/sensor_agent.h"
+#include "../agents/comm_agent/comm_agent.h"
+#include "../agents/actuator_agent/actuator_agent.h"
+#include "../scoreboard/concurrency_sb.h"
+#include "../coverage/coverage_bins.h"
 
 class env : public uvm::uvm_env {
 public:
     UVM_COMPONENT_UTILS(env);
 
-    env(uvm::uvm_component_name name = "env") : uvm::uvm_env(name) {}
+    sensor_agent*       sensor_agt;
+    comm_agent*         comm_agt;
+    actuator_agent*     actuator_agt;
+    concurrency_sb*     scoreboard;
+    coverage_bins*      cov;
+
+    env(uvm::uvm_component_name name = "env")
+        : uvm::uvm_env(name),
+          sensor_agt(nullptr),
+          comm_agt(nullptr),
+          actuator_agt(nullptr),
+          scoreboard(nullptr),
+          cov(nullptr) {}
 
     void build_phase(uvm::uvm_phase& phase) override {
         uvm::uvm_env::build_phase(phase);
+        sensor_agt   = sensor_agent::type_id::create("sensor_agt", this);
+        comm_agt     = comm_agent::type_id::create("comm_agt", this);
+        actuator_agt = actuator_agent::type_id::create("actuator_agt", this);
+        scoreboard   = concurrency_sb::type_id::create("scoreboard", this);
+        cov          = coverage_bins::type_id::create("cov", this);
         UVM_INFO("ENV", "Environment built", uvm::UVM_NONE);
+    }
+
+    void connect_phase(uvm::uvm_phase& phase) override {
+        uvm::uvm_env::connect_phase(phase);
+        // connect sensor monitor to scoreboard (sensor data integrity)
+        sensor_agt->monitor->analysis_port.connect(scoreboard->sensor_analysis_export);
+        // connect actuator monitor to scoreboard (PWM/GPIO validation)
+        actuator_agt->monitor->analysis_port.connect(scoreboard->actuator_analysis_export);
+        // connect comm monitor to scoreboard
+        comm_agt->monitor->analysis_port.connect(scoreboard->comm_analysis_export);
+        // connect sensor monitor to coverage collector
+        sensor_agt->monitor->analysis_port.connect(cov->sensor_analysis_export);
+        // connect actuator monitor to coverage collector
+        actuator_agt->monitor->analysis_port.connect(cov->actuator_analysis_export);
+        comm_agt->monitor->analysis_port.connect(cov->comm_analysis_export);
     }
 };
 
