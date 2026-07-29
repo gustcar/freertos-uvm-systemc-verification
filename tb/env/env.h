@@ -58,7 +58,7 @@ public:
         // connect actuator monitor to coverage collector
         actuator_agt->monitor->analysis_port.connect(cov->actuator_analysis_export);
         comm_agt->monitor->analysis_port.connect(cov->comm_analysis_export);
-        bridge::set_monitors(
+        hal_bridge::set_monitors(
             sensor_agt->monitor,
             actuator_agt->monitor,
             comm_agt->monitor
