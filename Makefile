@@ -75,15 +75,15 @@ SYSLIB   := -L/usr/local/lib -L/usr/local/lib-linux64 \
 
 TB_CORE_SRCS	 := tb/sc_main.cpp tb/env/env.cpp
 
-DUT_A_C_SRCS := src/hal/hal.c src/dut/group_a/shared_data_a $(SRC_TASKS_A)
+DUT_A_C_SRCS := src/hal/hal.c src/dut/group_a/shared_data_a.c $(SRC_TASKS_A)
 DUT_A_OBJS   := $(patsubst %.c, $(BUILD_DIR)/%.o, $(DUT_A_C_SRCS))
 
-DUT_B_C_SRCS := src/hal/hal.c src/dut/group_b/shared_data_b $(SRC_TASKS_B)
+DUT_B_C_SRCS := src/hal/hal.c src/dut/group_b/shared_data_b.c $(SRC_TASKS_B)
 DUT_B_OBJS   := $(patsubst %.c, $(BUILD_DIR)/%.o, $(DUT_B_C_SRCS))
 
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
-	$(CC) $CFLAGS -c -o $@ $
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/tb_a.elf: $(TB_CORE_SRCS) $(DUT_A_OBJS) | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -DDUT_GROUP_A -o $@ $(TB_CORE_SRCS) $(DUT_A_OBJS) $(SYSLIB)
@@ -98,7 +98,7 @@ build-tb-b: $(BUILD_DIR)/tb_b.elf
 run-tb-a: build-tb-a
 	./$(BUILD_DIR)/tb_a.elf race_condition_test
 
-run-tb-b: build-tb-B
+run-tb-b: build-tb-b
 	./$(BUILD_DIR)/tb_b.elf protected_test
 
 .PHONY: check-headers
