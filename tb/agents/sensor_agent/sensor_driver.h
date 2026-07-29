@@ -36,7 +36,7 @@ public:
 
 };
 
-float drv_temperature = 25.0f;
-float drv_humidity = 50.0f;
+inline float drv_temperature = 25.0f;
+inline float drv_humidity = 50.0f;
 
 #endif // SENSOR_DRIVER_H
