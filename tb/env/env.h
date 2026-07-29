@@ -12,6 +12,7 @@
 #include "../agents/actuator_agent/actuator_agent.h"
 #include "../scoreboard/concurrency_sb.h"
 #include "../coverage/coverage_bins.h"
+#include "../hal_bridge/dut_bridge.h"
 
 class env : public uvm::uvm_env {
 public:
@@ -22,6 +23,7 @@ public:
     actuator_agent*     actuator_agt;
     concurrency_sb*     scoreboard;
     coverage_bins*      cov;
+    dut_bridge*         bridge;
 
     env(uvm::uvm_component_name name = "env")
         : uvm::uvm_env(name),
@@ -29,7 +31,8 @@ public:
           comm_agt(nullptr),
           actuator_agt(nullptr),
           scoreboard(nullptr),
-          cov(nullptr) {}
+          cov(nullptr),
+          bridge(nullptr) {}
 
     void build_phase(uvm::uvm_phase& phase) override {
         uvm::uvm_env::build_phase(phase);
@@ -38,6 +41,7 @@ public:
         actuator_agt = actuator_agent::type_id::create("actuator_agt", this);
         scoreboard   = concurrency_sb::type_id::create("scoreboard", this);
         cov          = coverage_bins::type_id::create("cov", this);
+        bridge       = dut_bridge::type_id::create("bridge", this);
         UVM_INFO("ENV", "Environment built", uvm::UVM_NONE);
     }
 
@@ -54,6 +58,11 @@ public:
         // connect actuator monitor to coverage collector
         actuator_agt->monitor->analysis_port.connect(cov->actuator_analysis_export);
         comm_agt->monitor->analysis_port.connect(cov->comm_analysis_export);
+        bridge::set_monitors(
+            sensor_agt->monitor,
+            actuator_agt->monitor,
+            comm_agt->monitor
+        );
     }
 };
 
