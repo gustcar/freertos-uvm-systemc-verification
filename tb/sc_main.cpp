@@ -10,6 +10,8 @@
 #include <systemc>
 #include <uvm>
 #include "tests/base_test.h"
+#include "tests/race_condition_test.h"
+#include "tests/protected_test.h"
 
 int sc_main(int argc, char* argv[]) {
 
