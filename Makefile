@@ -73,15 +73,33 @@ CXXFLAGS := -std=c++17 -Wall -Wextra -O0 -g \
 SYSLIB   := -L/usr/local/lib -L/usr/local/lib-linux64 \
             -lsystemc -luvm-systemc -lpthread
 
-TB_SRCS	 := tb/sc_main.cpp tb/env/env.cpp
+TB_CORE_SRCS	 := tb/sc_main.cpp tb/env/env.cpp
 
-$(BUILD_DIR)/tb.elf: $(TB_SRCS) | $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) -o $@ $(TB_SRCS) $(SYSLIB)
+DUT_A_C_SRCS := src/hal/hal.c src/dut/group_a/shared_data_a $(SRC_TASKS_A)
+DUT_A_OBJS   := $(patsubst %.c, $(BUILD_DIR)/%.o, $(DUT_A_C_SRCS))
 
-.PHONY: build-tb
-build-tb: $(BUILD_DIR)/tb.elf
-run-tb: build-tb
-	./$(BUILD_DIR)/tb.elf
+DUT_B_C_SRCS := src/hal/hal.c src/dut/group_b/shared_data_b $(SRC_TASKS_B)
+DUT_B_OBJS   := $(patsubst %.c, $(BUILD_DIR)/%.o, $(DUT_B_C_SRCS))
+
+$(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(CC) $CFLAGS -c -o $@ $
+
+$(BUILD_DIR)/tb_a.elf: $(TB_CORE_SRCS) $(DUT_A_OBJS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -DDUT_GROUP_A -o $@ $(TB_CORE_SRCS) $(DUT_A_OBJS) $(SYSLIB)
+
+$(BUILD_DIR)/tb_b.elf: $(TB_CORE_SRCS) $(DUT_B_OBJS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -DDUT_GROUP_B -o $@ $(TB_CORE_SRCS) $(DUT_B_OBJS) $(SYSLIB)
+
+.PHONY: build-tb-a build-tb-b run-tb-a run-tb-b
+build-tb-a: $(BUILD_DIR)/tb_a.elf
+build-tb-b: $(BUILD_DIR)/tb_b.elf
+
+run-tb-a: build-tb-a
+	./$(BUILD_DIR)/tb_a.elf race_condition_test
+
+run-tb-b: build-tb-B
+	./$(BUILD_DIR)/tb_b.elf protected_test
 
 .PHONY: check-headers
 check-headers:
@@ -93,5 +111,6 @@ check-headers:
 		tb/agents/actuator_agent/actuator_seq_item.h tb/agents/actuator_agent/actuator_monitor.h tb/agents/actuator_agent/actuator_agent.h \
 		tb/coverage/coverage_bins.h tb/checker/data_integrity_checker.h tb/checker/timing_checker.h \
 		tb/checker/deadlock_detector.h tb/scoreboard/concurrency_sb.h \
-		tb/sequences/base_seq.h tb/sequences/race_condition_seq.h tb/sequences/priority_inversion_seq.h
+		tb/sequences/base_seq.h tb/sequences/race_condition_seq.h tb/sequences/priority_inversion_seq.h \
+		tb/tests/race_condition_test.h tb/tests/protected_test.h
 
