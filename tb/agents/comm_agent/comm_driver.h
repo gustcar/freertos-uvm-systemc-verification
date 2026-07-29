@@ -36,7 +36,7 @@ public:
     }
 };
 
-unsigned int dvr_command_type = 0;
-float dvr_command_value = 0.0f;
+inline unsigned int dvr_command_type = 0;
+inline float dvr_command_value = 0.0f;
 
 #endif // COMM_DRIVER_H
