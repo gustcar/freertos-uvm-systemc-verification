@@ -28,10 +28,12 @@ public:
         // Passive observer — no objection needed
     }
 
-    void sample_and_send(unsigned int command_type, float command_value) {
+    void sample_and_send(unsigned int command_type, float command_value, unsigned int task_id, unsigned int sequence_id) {
         comm_seq_item* seq_item = comm_seq_item::type_id::create("comm_sample");
         seq_item->command_type = command_type;
         seq_item->command_value = command_value;
+        seq_item->task_id = task_id;
+        seq_item->sequence_id = sequence_id;
 
         UVM_INFO("COMM_MONITOR", "Sampled command values: command_type=" + std::to_string(seq_item->command_type) +
                  ", command_value=" + std::to_string(seq_item->command_value), uvm::UVM_LOW);
