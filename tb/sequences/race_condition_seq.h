@@ -18,7 +18,7 @@ public:
 
     race_condition_seq(const std::string& name = "race_condition_seq")
         : base_seq(name) {
-            num_items = 50;
+            num_items = 10000;
             seed = 123; // Fixed seed for reproducibility 
     }
 
@@ -26,7 +26,15 @@ public:
         init_randomizer();
 
         std::uniform_real_distribution<float> dist_temp_near(34.0f, 37.0f);
+        std::uniform_real_distribution<float> dist_temp_target_near(
+            TEMP_TARGET_DEFAULT - 0.3f,
+            TEMP_TARGET_DEFAULT + 0.3f
+        );
         std::uniform_int_distribution<int> dist_delay(0, 2); // 0 to 2 ns
+        std::uniform_real_distribution<float> dist_humid_near(
+            HUMIDITY_MIN_LIMIT - 2.0f,
+            HUMIDITY_MIN_LIMIT + 2.0f
+        );
 
         for (unsigned int i = 0; i < num_items; ++i) {
             sensor_seq_item* item = sensor_seq_item::type_id::create("item");
@@ -35,11 +43,18 @@ public:
             // Generate extreme values near thresholds
             if(i % 3 == 0) {
                 item->temperature = dist_temp_near(gen);
+            } else if (i % 3 == 1) {
+                item->temperature = dist_temp_target_near(gen);
             } else {
                 item->temperature = dist_temp(gen);
             }
-            item->humidity = dist_humid(gen);
-            
+
+            if(i % 2 == 0) {
+                item->humidity = dist_humid_near(gen);
+            } else {
+                item->humidity = dist_humid(gen);
+            }
+
             finish_item(item);
             sc_core::wait(dist_delay(gen), sc_core::SC_NS); // Minimal delay to increase race condition likelihood
         }
