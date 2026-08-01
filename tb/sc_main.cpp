@@ -21,10 +21,12 @@ int sc_main(int argc, char* argv[]) {
     // );
 
     UVM_INFO("SC_MAIN", "Running UVM-SystemC test", uvm::UVM_NONE);
+    //uvm::uvm_root::get()->set_timeout(sc_core::sc_time(1,sc_core::SC_SEC),true);
     
     std::string test_name = "base_test";
     if(argc > 1) test_name = argv[1];
 
+    uvm::uvm_root::get()->set_report_verbosity_level(uvm::UVM_LOW);
     uvm::run_test(test_name.c_str());
 
     return 0;
