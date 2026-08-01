@@ -15,11 +15,15 @@ public:
     
     unsigned int command_type; // CMD_NONE=0, CMD_TARGET=1, CMD_ENABLE=2, CMD_DISABLE=3, CMD_RESET=4
     float command_value; // Value associated with the command
+    unsigned int task_id;
+    unsigned int sequence_id;
 
     comm_seq_item(std::string name = "comm_seq_item")
         : uvm::uvm_sequence_item(name),
           command_type(0),
-          command_value(0.0f) {}
+          command_value(0.0f),
+          task_id(0),
+          sequence_id(0) {}
         
     void do_copy(const uvm::uvm_object& rhs) override {
         uvm::uvm_sequence_item::do_copy(rhs);
