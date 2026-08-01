@@ -20,16 +20,23 @@ public:
 
     void run_phase(uvm::uvm_phase& phase) override {
         (void)phase; // Unused parameter
-        comm_seq_item* item = nullptr;
+        comm_seq_item item;
 
         while (true) {
-            this->seq_item_port->get_next_item(*item);
+            bool got_item = this->seq_item_port->try_next_item(item);
+            
+            if (!got_item) {
+                //UVM_WARNING("COMM_DRIVER", "get_next_item returned null — phase ending, stopping driver");
+                //break;
+                sc_core::wait(1, sc_core::SC_NS);
+                continue;
+            }
 
-            dvr_command_type = item->command_type;
-            dvr_command_value = item->command_value;
+            dvr_command_type = item.command_type;
+            dvr_command_value = item.command_value;
 
             UVM_INFO("COMM_DRIVER", "Injecting: " + 
-               item->convert2string(), uvm::UVM_MEDIUM);
+               item.convert2string(), uvm::UVM_MEDIUM);
 
             this->seq_item_port->item_done();
         }
