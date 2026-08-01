@@ -60,20 +60,26 @@ public:
                 case hal_event_type::SENSOR:
                     if (sensor_mon())
                         sensor_mon()->sample_and_send(
-                            ev.temperature, ev.humidity,
-                            sim_time_ns,
+                            ev.temperature,
+                            ev.humidity,
+                            ev.sequence_id,
                             PRIORITY_SENSOR,
                             ev.task_id
                         );
                     break;
                 case hal_event_type::PWM:
-                    if (actuator_mon()) actuator_mon()->observe_pwm(ev.pwm_channel, ev.pwm_duty);
+                    if (actuator_mon()) actuator_mon()->observe_pwm(
+                        ev.pwm_channel,
+                        ev.pwm_duty,
+                        ev.task_id,
+                        ev.sequence_id
+                    );
                     break;
                 case hal_event_type::GPIO:
-                    if (actuator_mon()) actuator_mon()->observe_gpio(ev.gpio_pin, ev.gpio_state);
+                    if (actuator_mon()) actuator_mon()->observe_gpio(ev.gpio_pin, ev.gpio_state, ev.task_id, ev.sequence_id);
                     break;
                 case hal_event_type::COMM:
-                    if (comm_mon()) comm_mon()->sample_and_send(ev.command_type, ev.command_value);
+                    if (comm_mon()) comm_mon()->sample_and_send(ev.command_type, ev.command_value, ev.task_id, ev.sequence_id);
                     break;
             }
         }
@@ -135,6 +141,7 @@ extern "C" inline void hal_bridge_pwm_set(uint8_t channel, uint8_t duty_percent)
     ev.type = hal_event_type::PWM;
     ev.pwm_channel = channel;
     ev.pwm_duty = duty_percent;
+    ev.task_id = PRIORITY_CONTROL;
     hal_bridge::push(ev);
 }
 
@@ -143,6 +150,7 @@ extern "C" inline void hal_bridge_gpio_write(uint8_t pin, bool value) {
     ev.type = hal_event_type::GPIO;
     ev.gpio_pin = pin;
     ev.gpio_state = value;
+    ev.task_id = (pin == GPIO_PIN_LED_ALARM) ? PRIORITY_ALARM : PRIORITY_CONTROL;
     hal_bridge::push(ev);
 }
 
@@ -163,8 +171,9 @@ extern "C" inline int hal_bridge_uart_rx(uint8_t* buf, uint16_t len) {
     ev.type = hal_event_type::COMM;
     ev.command_type = dvr_command_type;
     ev.command_value = dvr_command_value;
+    ev.task_id = PRIORITY_COMM;
     hal_bridge::push(ev);
-
+    
     dvr_command_type = CMD_NONE;   // consume — avoid re-injecting the same command every poll
     return static_cast<int>(sizeof(command_t));
 }
