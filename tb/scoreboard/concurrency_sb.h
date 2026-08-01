@@ -85,6 +85,8 @@ public:
     }
 
     void write(actuator_seq_item* item) {
+        deadlock_chk->heartbeat(item->task_id, item->sequence_id);
+        deadlock_chk->check(item->sequence_id);
         // PWM range check
         if (item->type == actuator_seq_item::PWM) {
             if (item->pwm_duty_cycle > 100) {
@@ -114,12 +116,16 @@ public:
                     has_pending_fan = false;
                     has_pending_pump = false;
                 }
+            } else if(item->gpio_pin == GPIO_PIN_LED_ALARM) {
+                check_alarm_pair(item->gpio_state);
             }
             timing_chk->on_actuator_reaction();
         }
     }
 
     void write(comm_seq_item* item) {
+        deadlock_chk->heartbeat(item->task_id, item->sequence_id);
+        deadlock_chk->check(item->sequence_id);
         if (item->command_type == CMD_TARGET || item->command_type == CMD_RESET) {
             modeled_target_temp = (item->command_type == CMD_RESET) ? TEMP_TARGET_DEFAULT : item->command_value;
             UVM_INFO(
@@ -213,7 +219,26 @@ private:
             "possible torn read of temp+humidity in control_task.");
     }
 
+    static bool compute_expected_alarm_led(float temperature, float humidity) {
+        if(temperature >= TEMP_CRITICAL_LIMIT) return true;
+        if(temperature >= TEMP_ALARM_LIMIT || humidity >= HUMIDITY_MAX_LIMIT || humidity <= HUMIDITY_MIN_LIMIT) return true;
+        return false;
+    }
 
+    void check_alarm_pair(bool observed_led_state) {
+        if(recent_snapshots.empty()) return;
+        actuator_checks++;
+        for(const auto& snap : recent_snapshots) {
+            bool expected_led = compute_expected_alarm_led(snap.temperature, snap.humidity);
+            if(expected_led == observed_led_state) return;
+        }
+        mismatches++;
+        UVM_ERROR(
+            "SB_REFMODEL_ALARM",
+            "alarm LED=" + std::string(observed_led_state ? "true" : "false") +
+            " does not match any recent sensor snapshot - possible torn read of temp+humidity in alarm_task."
+        );
+    }
 };
 
 #endif // CONCURRENCY_SB_H
