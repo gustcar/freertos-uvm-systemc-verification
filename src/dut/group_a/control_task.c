@@ -55,6 +55,9 @@ void control_task(void) {
         actuators.pump_on = should_pump_on;
         actuators.fan_duty = calculated_fan_duty;
 
+        hal_pwm_set(PWM_CH_FAN, calculated_fan_duty);
+        hal_gpio_write(GPIO_PIN_PUMP, should_pump_on);
+
         // Small random delay to increase the chance of thread interleaving
         if (rand() % 3 == 0) {
             hal_delay_ms(rand() % 2);
