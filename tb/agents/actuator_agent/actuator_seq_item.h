@@ -16,6 +16,8 @@ public:
     unsigned int pwm_duty_cycle;
     unsigned int gpio_pin;
     bool         gpio_state;
+    unsigned int task_id;
+    unsigned int sequence_id;
 
     actuator_seq_item(std::string name = "actuator_seq_item")
         : uvm::uvm_sequence_item(name),
@@ -23,7 +25,9 @@ public:
           pwm_channel(0),
           pwm_duty_cycle(0),
           gpio_pin(0),
-          gpio_state(false) {}
+          gpio_state(false),
+          task_id(0),
+          sequence_id(0) {}
     
     std::string convert2string() const override {
         if(type == PWM) {
@@ -42,6 +46,8 @@ public:
         pwm_duty_cycle = item.pwm_duty_cycle;
         gpio_pin = item.gpio_pin;
         gpio_state = item.gpio_state;
+        task_id = item.task_id;
+        sequence_id = item.sequence_id;
     }
 
     virtual bool do_compare(const uvm::uvm_object& rhs, const uvm::uvm_comparer* comparer = nullptr) const override {
