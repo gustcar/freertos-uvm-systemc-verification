@@ -54,6 +54,9 @@ void control_task_safe(void) {
         actuators.fan_duty = calculated_fan_duty;
         pthread_mutex_unlock(&mutex_actuators);
 
+        hal_pwm_set(PWM_CH_FAN, calculated_fan_duty);
+        hal_gpio_write(GPIO_PIN_PUMP, should_pump_on);
+
         if (rand() % 3 == 0) {
             hal_delay_ms(rand() % 2);
         }
