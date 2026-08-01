@@ -27,7 +27,7 @@ public:
         // Passive observer — no objection needed
     }
 
-    void observe_pwm(unsigned int channel, unsigned int duty_cycle) {
+    void observe_pwm(unsigned int channel, unsigned int duty_cycle, unsigned int task_id, unsigned int sequence_id) {
         // Create a new sequence item for PWM observation
         actuator_seq_item* seq_item = actuator_seq_item::type_id::create("pwm_observation");
         seq_item->type = actuator_seq_item::PWM;
@@ -35,6 +35,8 @@ public:
         seq_item->pwm_duty_cycle = duty_cycle;
         seq_item->gpio_pin = 0; // Not applicable for PWM
         seq_item->gpio_state = false; // Not applicable for PWM
+        seq_item->task_id = task_id;
+        seq_item->sequence_id = sequence_id;
 
         UVM_INFO("ACTUATOR_MONITOR", "Observed PWM: channel=" + std::to_string(channel) +
                  ", duty_cycle=" + std::to_string(duty_cycle) + " %", uvm::UVM_LOW);
@@ -42,7 +44,7 @@ public:
         analysis_port.write(seq_item);
     }
 
-    void observe_gpio(unsigned int pin, bool state) {
+    void observe_gpio(unsigned int pin, bool state, unsigned int task_id, unsigned int sequence_id) {
         // Create a new sequence item for GPIO observation
         actuator_seq_item* seq_item = new actuator_seq_item("gpio_observation");
         seq_item->type = actuator_seq_item::GPIO;
@@ -50,6 +52,8 @@ public:
         seq_item->pwm_duty_cycle = 0; // Not applicable for GPIO
         seq_item->gpio_pin = pin;
         seq_item->gpio_state = state;
+        seq_item->task_id = task_id;
+        seq_item->sequence_id = sequence_id;
 
         UVM_INFO("ACTUATOR_MONITOR", "Observed GPIO: pin=" + std::to_string(pin) +
                  ", state=" + (state ? "true" : "false"), uvm::UVM_LOW);
