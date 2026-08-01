@@ -26,6 +26,7 @@ enum class hal_event_type { SENSOR, PWM, GPIO, COMM };
 
 struct hal_event {
     hal_event_type type;
+    unsigned int sequence_id = 0;
     float temperature = 0.0f, humidity = 0.0f;
     unsigned int pwm_channel = 0, pwm_duty = 0;
     unsigned int gpio_pin = 0; bool gpio_state = false;
@@ -36,8 +37,9 @@ struct hal_event {
 // Thread-safe hand-off: DUT pthreads (producers) -> SystemC thread (consumer)
 class hal_bridge {
 public:
-    static void push(const hal_event& ev) {
+    static void push(hal_event ev) {
         std::lock_guard<std::mutex> lk(get_mutex());
+        ev.sequence_id = next_sequence_id()++;
         queue().push_back(ev);
     }
 
@@ -47,6 +49,7 @@ public:
 
     // Called ONLY from the SystemC thread (dut_bridge run_phase)
     static void drain_to_monitors(unsigned int sim_time_ns) {
+        (void)sim_time_ns;
         std::deque<hal_event> local;
         {
             std::lock_guard<std::mutex> lk(get_mutex());
@@ -56,8 +59,12 @@ public:
             switch (ev.type) {
                 case hal_event_type::SENSOR:
                     if (sensor_mon())
-                        sensor_mon()->sample_and_send(ev.temperature, ev.humidity,
-                                                       sim_time_ns, PRIORITY_SENSOR, ev.task_id);
+                        sensor_mon()->sample_and_send(
+                            ev.temperature, ev.humidity,
+                            sim_time_ns,
+                            PRIORITY_SENSOR,
+                            ev.task_id
+                        );
                     break;
                 case hal_event_type::PWM:
                     if (actuator_mon()) actuator_mon()->observe_pwm(ev.pwm_channel, ev.pwm_duty);
@@ -85,6 +92,10 @@ private:
     static std::deque<hal_event>& queue() {
         static std::deque<hal_event> q;
         return q;
+    }
+    static unsigned int& next_sequence_id() {
+        static unsigned int id = 0;
+        return id;
     }
     static sensor_monitor*& sensor_mon() {
         static sensor_monitor* p = nullptr;
