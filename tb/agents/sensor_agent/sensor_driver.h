@@ -23,13 +23,20 @@ public:
     virtual void run_phase(uvm::uvm_phase& phase) override {
         (void)phase; // Unused parameter
         
-        sensor_seq_item* seq_item = nullptr;
+        sensor_seq_item seq_item;
 
         while (true) {
-            this->seq_item_port->get_next_item(seq_item);
+            bool got_item = this->seq_item_port->try_next_item(seq_item);
 
-            drv_temperature = seq_item->temperature;
-            drv_humidity = seq_item->humidity;
+            if (!got_item) {
+                //UVM_WARNING("SENSOR_DRIVER", "get_next_item returned null — phase ending, stopping driver");
+                //break;
+                sc_core::wait(1, sc_core::SC_NS);
+                continue;
+            }
+
+            drv_temperature = seq_item.temperature;
+            drv_humidity = seq_item.humidity;
             this->seq_item_port->item_done();
         }
     }
