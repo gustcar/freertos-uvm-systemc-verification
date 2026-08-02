@@ -14,6 +14,13 @@
 #include "hal.h"
 #include "shared_data_b.h"
 
+// Mutex indices — must match hal.c's HAL_MUTEX_COUNT ordering
+#define MUTEX_ID_SENSOR       0
+#define MUTEX_ID_TARGET_TEMP  1
+#define MUTEX_ID_ACTUATORS    2
+#define MUTEX_ID_ALARM        3
+#define MUTEX_ID_SYSTEM       4
+
 void control_task_safe(void) {
     float current_temp;
     float current_humidity;
@@ -21,17 +28,38 @@ void control_task_safe(void) {
     float error;
     uint8_t calculated_fan_duty;
     bool should_pump_on;
+    unsigned int holder_before;
+    uint32_t lock_start;
+    uint32_t wait_ms;
 
     for (int i = 0; i < LOOPS_PER_TASK; i++) {
-        // Protected read: sensor data
+        
+        // NEW: priority inversion instrumentation
+        holder_before = hal_mutex_current_holder(MUTEX_ID_SENSOR);
+        lock_start = hal_get_tick_ms();
+
         pthread_mutex_lock(&mutex_sensor);
+        wait_ms = hal_get_tick_ms() - lock_start;
+        hal_mutex_mark_acquired(MUTEX_ID_SENSOR, PRIORITY_CONTROL);
+        /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_CONTROL, MUTEX_ID_SENSOR, wait_ms, holder_before);
+
+        // Protected read: sensor data
         current_temp       = sensor_data.temperature;
         current_humidity   = sensor_data.humidity;
+
+        hal_mutex_mark_released(MUTEX_ID_SENSOR);
         pthread_mutex_unlock(&mutex_sensor);
 
-        // Protected read: setpoint
+        holder_before = hal_mutex_current_holder(MUTEX_ID_TARGET_TEMP);
+        lock_start = hal_get_tick_ms();
         pthread_mutex_lock(&mutex_target_temp);
+        wait_ms = hal_get_tick_ms() - lock_start;
+        hal_mutex_mark_acquired(MUTEX_ID_TARGET_TEMP, PRIORITY_CONTROL);
+        /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_CONTROL, MUTEX_ID_TARGET_TEMP, wait_ms, holder_before);
+        // Protected read: setpoint
         target_temperature = target_temp;
+
+        hal_mutex_mark_released(MUTEX_ID_TARGET_TEMP);
         pthread_mutex_unlock(&mutex_target_temp);
 
         // Control logic
@@ -48,12 +76,23 @@ void control_task_safe(void) {
 
         should_pump_on = (current_humidity < HUMIDITY_MIN_LIMIT);
 
-        /* Protected write: actuators */
+        // priority inversion instrumentation
+        holder_before = hal_mutex_current_holder(MUTEX_ID_ACTUATORS);
+        lock_start = hal_get_tick_ms();
         pthread_mutex_lock(&mutex_actuators);
+        wait_ms = hal_get_tick_ms() - lock_start;
+        hal_mutex_mark_acquired(MUTEX_ID_ACTUATORS, PRIORITY_CONTROL);
+        /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_CONTROL, MUTEX_ID_ACTUATORS, wait_ms, holder_before);
+        
+        // Protected write: actuators
         actuators.pump_on  = should_pump_on;
         actuators.fan_duty = calculated_fan_duty;
+        hal_mutex_mark_released(MUTEX_ID_ACTUATORS);
         pthread_mutex_unlock(&mutex_actuators);
 
+        // Expose actuator state via HAL so the testbench can observe it
+        // (mirrors control_task.c in Group A; kept outside the mutex since
+        // these are already-computed local values, not shared state)
         hal_pwm_set(PWM_CH_FAN, calculated_fan_duty);
         hal_gpio_write(GPIO_PIN_PUMP, should_pump_on);
 
