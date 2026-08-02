@@ -48,6 +48,7 @@ public:
         hal_register_gpio(hal_bridge_gpio_write, hal_bridge_gpio_read);
         hal_register_uart(hal_bridge_uart_rx);
         hal_register_log(hal_bridge_log_write);
+        hal_register_mutex_wait(hal_bridge_mutex_wait);
     }
 
     void run_phase(uvm::uvm_phase& phase) override {
