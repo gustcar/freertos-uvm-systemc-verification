@@ -18,6 +18,8 @@
 #include "../checker/data_integrity_checker.h"
 #include "../checker/timing_checker.h"
 #include "../checker/deadlock_detector.h"
+#include "../agents/mutex_wait_agent/mutex_wait_item.h"
+#include "../checker/priority_inversion_checker.h"
 
 extern "C" {
 #include "config.h"
@@ -40,10 +42,12 @@ public:
     uvm::uvm_analysis_imp<sensor_seq_item*, concurrency_sb>     sensor_analysis_export;
     uvm::uvm_analysis_imp<actuator_seq_item*, concurrency_sb> actuator_analysis_export;
     uvm::uvm_analysis_imp<comm_seq_item*, concurrency_sb>         comm_analysis_export;
+    uvm::uvm_analysis_imp<mutex_wait_item*, concurrency_sb> mutex_wait_analysis_export;
 
     data_integrity_checker* data_integrity_chk;
     timing_checker*         timing_chk;
     deadlock_detector*      deadlock_chk;
+    priority_inversion_checker* prio_inv_chk;
 
     unsigned int mismatches;
     unsigned int actuator_checks;
@@ -53,9 +57,11 @@ public:
           sensor_analysis_export("sensor_analysis_export", this),
           actuator_analysis_export("actuator_analysis_export", this),
           comm_analysis_export("comm_analysis_export", this),
+          mutex_wait_analysis_export("mutex_wait_analisys_export", this),
           data_integrity_chk(nullptr),
           timing_chk(nullptr),
           deadlock_chk(nullptr),
+          prio_inv_chk(nullptr),
           mismatches(0),
           actuator_checks(0),
           modeled_target_temp(TEMP_TARGET_DEFAULT) {}
@@ -65,6 +71,7 @@ public:
         data_integrity_chk = data_integrity_checker::type_id::create("data_integrity_chk", this);
         timing_chk         = timing_checker::type_id::create("timing_chk", this);
         deadlock_chk       = deadlock_detector::type_id::create("deadlock_chk", this);
+        prio_inv_chk       = priority_inversion_checker::type_id::create("prio_inv_chk", this);
     }
 
     void write(sensor_seq_item* item) {
@@ -140,6 +147,15 @@ public:
                 uvm::UVM_LOW
             );
         }
+    }
+
+    void write(mutex_wait_item* item) {
+        prio_inv_chk->record_wait(
+            item->task_id,
+            item->mutex_id,
+            item->wait_ms,
+            item->holder_task_id
+        );
     }
 
     void report_phase(uvm::uvm_phase& phase) override {
