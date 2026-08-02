@@ -13,6 +13,7 @@
 #include "../scoreboard/concurrency_sb.h"
 #include "../coverage/coverage_bins.h"
 #include "../hal_bridge/dut_bridge.h"
+#include "../agents/mutex_wait_agent/mutex_wait_agent.h"
 
 class env : public uvm::uvm_env {
 public:
@@ -21,6 +22,7 @@ public:
     sensor_agent*       sensor_agt;
     comm_agent*         comm_agt;
     actuator_agent*     actuator_agt;
+    mutex_wait_agent*   mutex_wait_agt;
     concurrency_sb*     scoreboard;
     coverage_bins*      cov;
     dut_bridge*         bridge;
@@ -30,6 +32,7 @@ public:
           sensor_agt(nullptr),
           comm_agt(nullptr),
           actuator_agt(nullptr),
+          mutex_wait_agt(nullptr),
           scoreboard(nullptr),
           cov(nullptr),
           bridge(nullptr) {}
@@ -39,6 +42,7 @@ public:
         sensor_agt   = sensor_agent::type_id::create("sensor_agt", this);
         comm_agt     = comm_agent::type_id::create("comm_agt", this);
         actuator_agt = actuator_agent::type_id::create("actuator_agt", this);
+        mutex_wait_agt = mutex_wait_agent::type_id::create("mutex_wait_agt", this);
         scoreboard   = concurrency_sb::type_id::create("scoreboard", this);
         cov          = coverage_bins::type_id::create("cov", this);
         bridge       = dut_bridge::type_id::create("bridge", this);
@@ -53,6 +57,7 @@ public:
         actuator_agt->monitor->analysis_port.connect(scoreboard->actuator_analysis_export);
         // connect comm monitor to scoreboard
         comm_agt->monitor->analysis_port.connect(scoreboard->comm_analysis_export);
+        mutex_wait_agt->monitor->analysis_port.connect(scoreboard->mutex_wait_analysis_export);
         // connect sensor monitor to coverage collector
         sensor_agt->monitor->analysis_port.connect(cov->sensor_analysis_export);
         // connect actuator monitor to coverage collector
@@ -61,7 +66,8 @@ public:
         hal_bridge::set_monitors(
             sensor_agt->monitor,
             actuator_agt->monitor,
-            comm_agt->monitor
+            comm_agt->monitor,
+            mutex_wait_agt->monitor
         );
     }
 };
