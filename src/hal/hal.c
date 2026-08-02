@@ -5,6 +5,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
 
 // Internal callback pointers
 static hal_adc_read_cb_t     adc_cb         = NULL;
@@ -13,8 +14,17 @@ static hal_gpio_write_cb_t   gpio_write_cb  = NULL;
 static hal_gpio_read_cb_t    gpio_read_cb   = NULL;
 static hal_uart_rx_cb_t      uart_cb        = NULL;
 static hal_log_write_cb_t    log_write_cb   = NULL;
+static hal_mutex_wait_cb_t   mutex_wait_cb  = NULL;
 
 static sim_mode_t current_mode = MODE_NORMAL;
+
+// NEW: DUT-side mutex holder tracking (5 mutexes: sensor, target_temp,
+// actuators, alarm, system — same indices as shared_data_b.h mutex order)
+#define HAL_MUTEX_COUNT 5
+static unsigned int mutex_holder[HAL_MUTEX_COUNT] = {
+    (unsigned int)-1, (unsigned int)-1, (unsigned int)-1, (unsigned int)-1, (unsigned int)-1
+};
+static pthread_mutex_t holder_table_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // Init
 void hal_init(sim_mode_t mode) {
@@ -25,6 +35,11 @@ void hal_init(sim_mode_t mode) {
     gpio_read_cb    = NULL;
     uart_cb         = NULL;
     log_write_cb    = NULL;
+    mutex_wait_cb   = NULL;
+
+    pthread_mutex_lock(&holder_table_lock);
+    for (int i = 0; i < HAL_MUTEX_COUNT; i++) mutex_holder[i] = (unsigned int)-1;
+    pthread_mutex_unlock(&holder_table_lock);
 }
 
 // Callback registration
@@ -43,6 +58,9 @@ void hal_register_uart(hal_uart_rx_cb_t callback) {
 }
 void hal_register_log(hal_log_write_cb_t callback) {
     log_write_cb = callback;
+}
+void hal_register_mutex_wait(hal_mutex_wait_cb_t callback) {
+    mutex_wait_cb = callback;
 }
 
 // ADC: returns simulated sensor values
@@ -143,4 +161,45 @@ void hal_delay_ms(uint32_t ms) {
         .tv_nsec = (ms % 1000) * 1000000L
     };
     nanosleep(&ts, NULL);
+}
+
+
+// ============================================================
+// NEW: Mutex wait reporting (Group B priority inversion instrumentation)
+//
+// LIMITATION: hal_mutex_current_holder() is read BEFORE the caller
+// attempts pthread_mutex_lock(). There is a race window between that
+// read and the actual lock attempt where the holder may change —
+// this is a best-effort snapshot, not an atomic guarantee. Documented
+// as a known limitation of this caixa-preta instrumentation approach.
+// ============================================================
+
+void hal_report_mutex_wait(unsigned int task_id, unsigned int mutex_id, uint32_t wait_ms, unsigned int holder_task_id) {
+    if (mutex_wait_cb) {
+        mutex_wait_cb(task_id, mutex_id, wait_ms, holder_task_id);
+        return;
+    }
+    /* Default POSIX stub: no-op — standalone Group B build ignores this */
+}
+
+void hal_mutex_mark_acquired(unsigned int mutex_id, unsigned int task_id) {
+    if (mutex_id >= HAL_MUTEX_COUNT) return;
+    pthread_mutex_lock(&holder_table_lock);
+    mutex_holder[mutex_id] = task_id;
+    pthread_mutex_unlock(&holder_table_lock);
+}
+
+void hal_mutex_mark_released(unsigned int mutex_id) {
+    if (mutex_id >= HAL_MUTEX_COUNT) return;
+    pthread_mutex_lock(&holder_table_lock);
+    mutex_holder[mutex_id] = (unsigned int)-1;
+    pthread_mutex_unlock(&holder_table_lock);
+}
+
+unsigned int hal_mutex_current_holder(unsigned int mutex_id) {
+    if (mutex_id >= HAL_MUTEX_COUNT) return (unsigned int)-1;
+    pthread_mutex_lock(&holder_table_lock);
+    unsigned int h = mutex_holder[mutex_id];
+    pthread_mutex_unlock(&holder_table_lock);
+    return h;
 }
