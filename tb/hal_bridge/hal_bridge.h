@@ -10,6 +10,7 @@
 #include "../agents/sensor_agent/sensor_monitor.h"
 #include "../agents/actuator_agent/actuator_monitor.h"
 #include "../agents/comm_agent/comm_monitor.h"
+#include "../agents/mutex_wait_agent/mutex_wait_monitor.h"
 
 extern "C" {
 #include "config.h"
@@ -22,7 +23,7 @@ extern float drv_humidity;
 extern unsigned int dvr_command_type;
 extern float dvr_command_value;
 
-enum class hal_event_type { SENSOR, PWM, GPIO, COMM };
+enum class hal_event_type { SENSOR, PWM, GPIO, COMM, MUTEX_WAIT };
 
 struct hal_event {
     hal_event_type type;
@@ -32,6 +33,9 @@ struct hal_event {
     unsigned int gpio_pin = 0; bool gpio_state = false;
     unsigned int command_type = 0; float command_value = 0.0f;
     unsigned int task_id = 0;
+    unsigned int mutex_id = 0;
+    unsigned int mutex_wait_ms = 0;
+    unsigned int mutex_holder_task_id = 0;
 };
 
 // Thread-safe hand-off: DUT pthreads (producers) -> SystemC thread (consumer)
@@ -43,8 +47,8 @@ public:
         queue().push_back(ev);
     }
 
-    static void set_monitors(sensor_monitor* s, actuator_monitor* a, comm_monitor* c) {
-        sensor_mon() = s; actuator_mon() = a; comm_mon() = c;
+    static void set_monitors(sensor_monitor* s, actuator_monitor* a, comm_monitor* c, mutex_wait_monitor* m) {
+        sensor_mon() = s; actuator_mon() = a; comm_mon() = c; mutex_wait_mon() = m;
     }
 
     // Called ONLY from the SystemC thread (dut_bridge run_phase)
@@ -81,6 +85,15 @@ public:
                 case hal_event_type::COMM:
                     if (comm_mon()) comm_mon()->sample_and_send(ev.command_type, ev.command_value, ev.task_id, ev.sequence_id);
                     break;
+                case hal_event_type::MUTEX_WAIT:
+                    if (mutex_wait_mon())
+                        mutex_wait_mon()->sample_and_send(
+                            ev.task_id,
+                            ev.mutex_id,
+                            ev.mutex_wait_ms,
+                            ev.mutex_holder_task_id
+                        );
+                    break;
             }
         }
     }
@@ -113,6 +126,10 @@ private:
     }
     static comm_monitor*& comm_mon() {
         static comm_monitor* p = nullptr;
+        return p;
+    }
+    static mutex_wait_monitor*& mutex_wait_mon() {
+        static mutex_wait_monitor* p = nullptr;
         return p;
     }
 };
@@ -182,5 +199,18 @@ extern "C" inline int hal_bridge_log_write(const char* data, uint16_t len) {
     std::fwrite(data, 1, len, stdout);   // pass-through; logger activity is out of TB scope
     return static_cast<int>(len);
 }
+
+// bridges hal_report_mutex_wait() into the HAL event queue
+extern "C" inline void hal_bridge_mutex_wait(unsigned int task_id, unsigned int mutex_id,
+    uint32_t wait_ms, unsigned int holder_task_id) {
+    hal_event ev;
+    ev.type = hal_event_type::MUTEX_WAIT;
+    ev.task_id = task_id;
+    ev.mutex_id = mutex_id;
+    ev.mutex_wait_ms = wait_ms;
+    ev.mutex_holder_task_id = holder_task_id;
+    hal_bridge::push(ev);
+}
+
 
 #endif // TB_HAL_BRIDGE_H
