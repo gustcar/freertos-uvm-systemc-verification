@@ -45,4 +45,20 @@ void hal_register_log(hal_log_write_cb_t log_write_callback);
 uint32_t hal_get_tick_ms(void);
 void hal_delay_ms(uint32_t ms);
 
+// Mutex Wait Reporting (Group B priority inversion instrumentation)
+// reports how long task_id waited to acquire mutex_id, and which
+// task held it just before the lock attempt (best-effort snapshot —
+// see hal.c for the race-window caveat).
+void hal_report_mutex_wait(unsigned int task_id, unsigned int mutex_id, uint32_t wait_ms, unsigned int holder_task_id);
+// Used by UVM-SystemC
+typedef void (*hal_mutex_wait_cb_t)(unsigned int task_id, unsigned int mutex_id, uint32_t wait_ms, unsigned int holder_task_id);
+void hal_register_mutex_wait(hal_mutex_wait_cb_t mutex_wait_callback);
+
+// DUT-side holder tracking table (5 mutexes: sensor, target_temp,
+// actuators, alarm, system — same indices as shared_data_b.h mutex order)
+void hal_mutex_mark_acquired(unsigned int mutex_id, unsigned int task_id);
+void hal_mutex_mark_released(unsigned int mutex_id);
+unsigned int hal_mutex_current_holder(unsigned int mutex_id);
+
+
 #endif
