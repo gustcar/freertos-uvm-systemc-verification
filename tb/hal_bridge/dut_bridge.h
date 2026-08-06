@@ -4,6 +4,7 @@
 #include <systemc>
 #include <uvm>
 #include <pthread.h>
+#include <sched.h>
 #include <cstdlib>
 #include "hal_bridge.h"
 
@@ -31,6 +32,18 @@ extern "C" {
 #else
     #error "Define DUT_GROUP_A or DUT_GROUP_B when compiling the testbench"
 #endif
+}
+
+// opt-in core-pinning flag for the priority inversion demonstration.
+// OFF by default so it never affects race_condition_test / protected_test
+// (mutex A vs B comparison). Only priority_inversion_test enables this,
+// pinning logger_task/alarm_task/comm_task to the same core to reproduce
+// the classic single-core-style CPU contention scenario.
+namespace dut_bridge_detail {
+    inline bool& pin_priority_inversion_tasks() {
+        static bool enabled = false;
+        return enabled;
+    }
 }
 
 class dut_bridge : public uvm::uvm_component {
@@ -84,14 +97,31 @@ public:
 
         for (int i = 0; i < 5; ++i) {
             hal_bridge::active_dut_threads()++;
-            pthread_create(&threads[i], nullptr,
+            pthread_create(
+                &threads[i],
+                nullptr,
                 [](void* arg) -> void* {
                     int idx = static_cast<int>(reinterpret_cast<intptr_t>(arg));
                     task_functions[idx]();
                     hal_bridge::active_dut_threads()--;
                     return nullptr;
                 },
-                reinterpret_cast<void*>(static_cast<intptr_t>(i)));
+                reinterpret_cast<void*>(static_cast<intptr_t>(i))
+            );
+            
+            if(dut_bridge_detail::pin_priority_inversion_tasks() && (i == 0 || i == 3 || i == 4)) {
+                cpu_set_t cpuset;
+                CPU_ZERO(&cpuset);
+                CPU_SET(0, &cpuset);
+                int rc = pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset);
+                if (rc != 0) {
+                    UVM_WARNING("DUT_BRIDGE", "setaffinity failed for " + std::string(tasks[i].name) +
+                                ", errno=" + std::to_string(rc));
+                } else {
+                    UVM_INFO("DUT_BRIDGE", "Pinned " + std::string(tasks[i].name) + " to core 0", uvm::UVM_LOW);
+                }
+                //pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset);
+            }
             UVM_INFO("DUT_BRIDGE", std::string("Spawned ") + tasks[i].name, uvm::UVM_LOW);
         }
 
@@ -99,11 +129,13 @@ public:
         // from inside the SystemC thread only.
         while (hal_bridge::active_dut_threads() > 0) {
             hal_bridge::drain_to_monitors(
-                static_cast<unsigned int>(sc_core::sc_time_stamp().to_seconds() * 1e9));
+                static_cast<unsigned int>(sc_core::sc_time_stamp().to_seconds() * 1e9)
+            );
             sc_core::wait(1, sc_core::SC_MS);
         }
         hal_bridge::drain_to_monitors(
-            static_cast<unsigned int>(sc_core::sc_time_stamp().to_seconds() * 1e9));
+            static_cast<unsigned int>(sc_core::sc_time_stamp().to_seconds() * 1e9)
+        );
 
         for (int i = 0; i < 5; ++i) pthread_join(threads[i], nullptr);
 

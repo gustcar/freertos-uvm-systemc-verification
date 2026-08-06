@@ -106,13 +106,13 @@ public:
             }
             pending_fan_duty = item->pwm_duty_cycle;
             has_pending_fan = true;
-            
+
             if(has_pending_fan && has_pending_pump) {
                 check_actuator_pair(pending_fan_duty, pending_pump_on);
                 has_pending_fan = false;
                 has_pending_pump = false;
             }
-            timing_chk->on_actuator_reaction();
+            // timing_chk->on_actuator_reaction();
         } else {
             if (item->gpio_pin == GPIO_PIN_PUMP) {
                 pending_pump_on = item->gpio_state;
@@ -125,8 +125,8 @@ public:
                 }
             } else if(item->gpio_pin == GPIO_PIN_LED_ALARM) {
                 check_alarm_pair(item->gpio_state);
+                timing_chk->on_actuator_reaction();
             }
-            timing_chk->on_actuator_reaction();
         }
     }
 

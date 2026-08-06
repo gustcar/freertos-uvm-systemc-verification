@@ -22,16 +22,17 @@
 
 void sensor_task_safe(void) {
     unsigned int holder_before;
-    uint32_t lock_start, wait_ms;
+    uint64_t lock_start;
+    uint32_t wait_ms;
 
     for (int i = 0; i < LOOPS_PER_TASK; i++) {
         // priority inversion instrumentation
         holder_before = hal_mutex_current_holder(MUTEX_ID_SENSOR);
-        lock_start = hal_get_tick_ms();
+        lock_start = hal_get_tick_us();
         pthread_mutex_lock(&mutex_sensor);
-        wait_ms = hal_get_tick_ms() - lock_start;
+        wait_ms = (uint32_t)(hal_get_tick_us() - lock_start);
         hal_mutex_mark_acquired(MUTEX_ID_SENSOR, PRIORITY_SENSOR);
-        /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_SENSOR, MUTEX_ID_SENSOR, wait_ms, holder_before);
+        if (wait_ms > 0) hal_report_mutex_wait(PRIORITY_SENSOR, MUTEX_ID_SENSOR, wait_ms, holder_before);
         
         sensor_data.temperature = hal_adc_read(ADC_CH_TEMP);
         sensor_data.humidity = hal_adc_read(ADC_CH_HUMIDITY);

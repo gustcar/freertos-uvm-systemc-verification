@@ -25,18 +25,19 @@ void logger_task_safe(void) {
     char log_buffer[128];
     int log_len;
     unsigned int holder_before;
-    uint32_t lock_start, wait_ms;
+    uint64_t lock_start;
+    uint32_t wait_ms;
 
     for (int i = 0; i < LOOPS_PER_TASK; i++) {
         log.tick = hal_get_tick_ms();
 
         // NEW: priority inversion instrumentation
         holder_before = hal_mutex_current_holder(MUTEX_ID_SENSOR);
-        lock_start = hal_get_tick_ms();
+        lock_start = hal_get_tick_us();
         pthread_mutex_lock(&mutex_sensor);
-        wait_ms = hal_get_tick_ms() - lock_start;
+        wait_ms = (uint32_t)(hal_get_tick_us() - lock_start);
         hal_mutex_mark_acquired(MUTEX_ID_SENSOR, PRIORITY_LOGGER);
-        /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_LOGGER, MUTEX_ID_SENSOR, wait_ms, holder_before);
+        if (wait_ms > 0) hal_report_mutex_wait(PRIORITY_LOGGER, MUTEX_ID_SENSOR, wait_ms, holder_before);
         // Protected read: sensor data
         log.temp     = sensor_data.temperature;
         log.humidity = sensor_data.humidity;
@@ -45,11 +46,11 @@ void logger_task_safe(void) {
 
         // priority inversion instrumentation
         holder_before = hal_mutex_current_holder(MUTEX_ID_ACTUATORS);
-        lock_start = hal_get_tick_ms();
+        lock_start = hal_get_tick_us();
         pthread_mutex_lock(&mutex_actuators);
-        wait_ms = hal_get_tick_ms() - lock_start;
+        wait_ms = (uint32_t)(hal_get_tick_us() - lock_start);
         hal_mutex_mark_acquired(MUTEX_ID_ACTUATORS, PRIORITY_LOGGER);
-        /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_LOGGER, MUTEX_ID_ACTUATORS, wait_ms, holder_before);
+        if (wait_ms > 0) hal_report_mutex_wait(PRIORITY_LOGGER, MUTEX_ID_ACTUATORS, wait_ms, holder_before);
         // Protected read: actuators
         log.pump_on  = actuators.pump_on;
         log.fan_duty = actuators.fan_duty;
@@ -58,11 +59,11 @@ void logger_task_safe(void) {
 
         // priority inversion instrumentation
         holder_before = hal_mutex_current_holder(MUTEX_ID_ALARM);
-        lock_start = hal_get_tick_ms();
+        lock_start = hal_get_tick_us();
         pthread_mutex_lock(&mutex_alarm);
-        wait_ms = hal_get_tick_ms() - lock_start;
+        wait_ms = (uint32_t)(hal_get_tick_us() - lock_start);
         hal_mutex_mark_acquired(MUTEX_ID_ALARM, PRIORITY_LOGGER);
-        /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_LOGGER, MUTEX_ID_ALARM, wait_ms, holder_before);
+        if (wait_ms > 0) hal_report_mutex_wait(PRIORITY_LOGGER, MUTEX_ID_ALARM, wait_ms, holder_before);
         // Protected read: alarm state
         log.alarm_level = (uint8_t)alarm_state;
         hal_mutex_mark_released(MUTEX_ID_ALARM);

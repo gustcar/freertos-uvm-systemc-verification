@@ -36,7 +36,7 @@ public:
           total_waits(0),
           suspicious_waits(0),
           confirmed_inversions(0),
-          wait_threshold_ms(0) {}
+          wait_threshold_ms(50) {}
 
     void record_wait(unsigned int task_id, unsigned int mutex_id, unsigned int wait_ms, unsigned int holder_task_id) {
         total_waits++;

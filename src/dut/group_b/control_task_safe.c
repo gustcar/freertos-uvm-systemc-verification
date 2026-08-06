@@ -29,19 +29,19 @@ void control_task_safe(void) {
     uint8_t calculated_fan_duty;
     bool should_pump_on;
     unsigned int holder_before;
-    uint32_t lock_start;
+    uint64_t lock_start;
     uint32_t wait_ms;
 
     for (int i = 0; i < LOOPS_PER_TASK; i++) {
         
         // NEW: priority inversion instrumentation
         holder_before = hal_mutex_current_holder(MUTEX_ID_SENSOR);
-        lock_start = hal_get_tick_ms();
+        lock_start = hal_get_tick_us();
 
         pthread_mutex_lock(&mutex_sensor);
-        wait_ms = hal_get_tick_ms() - lock_start;
+        wait_ms = (uint32_t)(hal_get_tick_us() - lock_start);
         hal_mutex_mark_acquired(MUTEX_ID_SENSOR, PRIORITY_CONTROL);
-        /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_CONTROL, MUTEX_ID_SENSOR, wait_ms, holder_before);
+        if (wait_ms > 0) hal_report_mutex_wait(PRIORITY_CONTROL, MUTEX_ID_SENSOR, wait_ms, holder_before);
 
         // Protected read: sensor data
         current_temp       = sensor_data.temperature;
@@ -51,11 +51,11 @@ void control_task_safe(void) {
         pthread_mutex_unlock(&mutex_sensor);
 
         holder_before = hal_mutex_current_holder(MUTEX_ID_TARGET_TEMP);
-        lock_start = hal_get_tick_ms();
+        lock_start = hal_get_tick_us();
         pthread_mutex_lock(&mutex_target_temp);
-        wait_ms = hal_get_tick_ms() - lock_start;
+        wait_ms = (uint32_t)(hal_get_tick_us() - lock_start);
         hal_mutex_mark_acquired(MUTEX_ID_TARGET_TEMP, PRIORITY_CONTROL);
-        /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_CONTROL, MUTEX_ID_TARGET_TEMP, wait_ms, holder_before);
+        if (wait_ms > 0) hal_report_mutex_wait(PRIORITY_CONTROL, MUTEX_ID_TARGET_TEMP, wait_ms, holder_before);
         // Protected read: setpoint
         target_temperature = target_temp;
 
@@ -78,11 +78,11 @@ void control_task_safe(void) {
 
         // priority inversion instrumentation
         holder_before = hal_mutex_current_holder(MUTEX_ID_ACTUATORS);
-        lock_start = hal_get_tick_ms();
+        lock_start = hal_get_tick_us();
         pthread_mutex_lock(&mutex_actuators);
-        wait_ms = hal_get_tick_ms() - lock_start;
+        wait_ms = (uint32_t)(hal_get_tick_us() - lock_start);
         hal_mutex_mark_acquired(MUTEX_ID_ACTUATORS, PRIORITY_CONTROL);
-        /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_CONTROL, MUTEX_ID_ACTUATORS, wait_ms, holder_before);
+        if (wait_ms > 0) hal_report_mutex_wait(PRIORITY_CONTROL, MUTEX_ID_ACTUATORS, wait_ms, holder_before);
         
         // Protected write: actuators
         actuators.pump_on  = should_pump_on;

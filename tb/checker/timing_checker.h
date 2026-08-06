@@ -60,13 +60,13 @@ public:
         }
 
         if (ts >= cross_timestamp_ns) {
-            unsigned int latency_ms = (ts - cross_timestamp_ns) / 1000000;
+            unsigned int latency_samples = (ts - cross_timestamp_ns);
             samples++;
-            if (latency_ms > max_latency_ms)
-                max_latency_ms = latency_ms;
+            if (latency_samples > max_latency_ms)
+                max_latency_ms = latency_samples;
             pending_crossings--;
             UVM_INFO("TIMING",
-                     "Alarm latency = " + std::to_string(latency_ms) + " ms",
+                     "Alarm latency = " + std::to_string(latency_samples) + " ns",
                      uvm::UVM_MEDIUM);
         }
     }

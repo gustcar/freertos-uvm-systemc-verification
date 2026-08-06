@@ -163,9 +163,14 @@ void hal_delay_ms(uint32_t ms) {
     nanosleep(&ts, NULL);
 }
 
+uint64_t hal_get_tick_us(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)(ts.tv_sec * 1000000ULL + ts.tv_nsec / 1000);
+}
 
 // ============================================================
-// NEW: Mutex wait reporting (Group B priority inversion instrumentation)
+// Mutex wait reporting (Group B priority inversion instrumentation)
 //
 // LIMITATION: hal_mutex_current_holder() is read BEFORE the caller
 // attempts pthread_mutex_lock(). There is a race window between that

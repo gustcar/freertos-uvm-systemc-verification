@@ -26,19 +26,19 @@ void alarm_task_safe(void) {
     alarm_level_t new_alarm_state;
     bool alarm_led_active;
     unsigned int holder_before;
-    uint32_t lock_start;
+    uint64_t lock_start;
     uint32_t wait_ms;
 
     for (int i = 0; i < LOOPS_PER_TASK; i++) {
         // PROTECTED READ: sensor data
         // priority inversion instrumentation
         holder_before = hal_mutex_current_holder(MUTEX_ID_SENSOR);
-        lock_start = hal_get_tick_ms();
+        lock_start = hal_get_tick_us();
 
         pthread_mutex_lock(&mutex_sensor);
-        wait_ms = hal_get_tick_ms() - lock_start;
+        wait_ms = (uint32_t)(hal_get_tick_us() - lock_start);
         hal_mutex_mark_acquired(MUTEX_ID_SENSOR, PRIORITY_ALARM);
-        /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_ALARM, MUTEX_ID_SENSOR, wait_ms, holder_before);
+        if (wait_ms > 0) hal_report_mutex_wait(PRIORITY_ALARM, MUTEX_ID_SENSOR, wait_ms, holder_before);
 
         current_temp = sensor_data.temperature;
         current_humidity = sensor_data.humidity;
@@ -63,13 +63,13 @@ void alarm_task_safe(void) {
         }
         
         holder_before = hal_mutex_current_holder(MUTEX_ID_ALARM);
-        lock_start = hal_get_tick_ms();
+        lock_start = hal_get_tick_us();
 
         pthread_mutex_lock(&mutex_alarm);
 
-        wait_ms = hal_get_tick_ms() - lock_start;
+        wait_ms = (uint32_t)(hal_get_tick_us() - lock_start);
         hal_mutex_mark_acquired(MUTEX_ID_ALARM, PRIORITY_ALARM);
-        /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_ALARM, MUTEX_ID_ALARM, wait_ms, holder_before);
+        if (wait_ms > 0) hal_report_mutex_wait(PRIORITY_ALARM, MUTEX_ID_ALARM, wait_ms, holder_before);
         
         // PROTECTED WRITE: alarm state
         alarm_state = new_alarm_state;

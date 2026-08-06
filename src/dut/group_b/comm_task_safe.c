@@ -28,7 +28,8 @@ void comm_task_safe(void) {
     command_t command;
     int bytes;
     unsigned int holder_before;
-    uint32_t lock_start, wait_ms;
+    uint64_t lock_start;
+    uint32_t wait_ms;
 
     for (int i = 0; i < LOOPS_PER_TASK; i++) {
         // Simulate UART command reception
@@ -42,44 +43,44 @@ void comm_task_safe(void) {
                 case CMD_TARGET:
                     // priority inversion instrumentation
                     holder_before = hal_mutex_current_holder(MUTEX_ID_TARGET_TEMP);
-                    lock_start = hal_get_tick_ms();
+                    lock_start = hal_get_tick_us();
                     pthread_mutex_lock(&mutex_target_temp);
-                    wait_ms = hal_get_tick_ms() - lock_start;
+                    wait_ms = (uint32_t)(hal_get_tick_us() - lock_start);
                     hal_mutex_mark_acquired(MUTEX_ID_TARGET_TEMP, PRIORITY_COMM);
-                    /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_COMM, MUTEX_ID_TARGET_TEMP, wait_ms, holder_before);
+                    if (wait_ms > 0) hal_report_mutex_wait(PRIORITY_COMM, MUTEX_ID_TARGET_TEMP, wait_ms, holder_before);
                     target_temp = command.value;
                     hal_mutex_mark_released(MUTEX_ID_TARGET_TEMP);
                     pthread_mutex_unlock(&mutex_target_temp);
                     break;
                 case CMD_ENABLE:
                     holder_before = hal_mutex_current_holder(MUTEX_ID_SYSTEM);
-                    lock_start = hal_get_tick_ms();
+                    lock_start = hal_get_tick_us();
                     pthread_mutex_lock(&mutex_system);
-                    wait_ms = hal_get_tick_ms() - lock_start;
+                    wait_ms = (uint32_t)(hal_get_tick_us() - lock_start);
                     hal_mutex_mark_acquired(MUTEX_ID_SYSTEM, PRIORITY_COMM);
-                    /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_COMM, MUTEX_ID_SYSTEM, wait_ms, holder_before);
+                    if (wait_ms > 0) hal_report_mutex_wait(PRIORITY_COMM, MUTEX_ID_SYSTEM, wait_ms, holder_before);
                     system_enabled = true;
                     hal_mutex_mark_released(MUTEX_ID_SYSTEM);
                     pthread_mutex_unlock(&mutex_system);
                     break;
                 case CMD_DISABLE:
                     holder_before = hal_mutex_current_holder(MUTEX_ID_SYSTEM);
-                    lock_start = hal_get_tick_ms();
+                    lock_start = hal_get_tick_us();
                     pthread_mutex_lock(&mutex_system);
-                    wait_ms = hal_get_tick_ms() - lock_start;
+                    wait_ms = (uint32_t)(hal_get_tick_us() - lock_start);
                     hal_mutex_mark_acquired(MUTEX_ID_SYSTEM, PRIORITY_COMM);
-                    /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_COMM, MUTEX_ID_SYSTEM, wait_ms, holder_before);
+                    if (wait_ms > 0) hal_report_mutex_wait(PRIORITY_COMM, MUTEX_ID_SYSTEM, wait_ms, holder_before);
                     system_enabled = false;
                     hal_mutex_mark_released(MUTEX_ID_SYSTEM);
                     pthread_mutex_unlock(&mutex_system);
                     break;
                 case CMD_RESET:
                     holder_before = hal_mutex_current_holder(MUTEX_ID_TARGET_TEMP);
-                    lock_start = hal_get_tick_ms();
+                    lock_start = hal_get_tick_us();
                     pthread_mutex_lock(&mutex_target_temp);
-                    wait_ms = hal_get_tick_ms() - lock_start;
+                    wait_ms = (uint32_t)(hal_get_tick_us() - lock_start);
                     hal_mutex_mark_acquired(MUTEX_ID_TARGET_TEMP, PRIORITY_COMM);
-                    /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_COMM, MUTEX_ID_TARGET_TEMP, wait_ms, holder_before);
+                    if (wait_ms > 0) hal_report_mutex_wait(PRIORITY_COMM, MUTEX_ID_TARGET_TEMP, wait_ms, holder_before);
 
                     target_temp = command.value;
 
@@ -87,11 +88,11 @@ void comm_task_safe(void) {
                     pthread_mutex_unlock(&mutex_target_temp);
                     
                     holder_before = hal_mutex_current_holder(MUTEX_ID_SYSTEM);
-                    lock_start = hal_get_tick_ms();
+                    lock_start = hal_get_tick_us();
                     pthread_mutex_lock(&mutex_system);
-                    wait_ms = hal_get_tick_ms() - lock_start;
+                    wait_ms = (uint32_t)(hal_get_tick_us() - lock_start);
                     hal_mutex_mark_acquired(MUTEX_ID_SYSTEM, PRIORITY_COMM);
-                    /*if (wait_ms >= 0)*/ hal_report_mutex_wait(PRIORITY_COMM, MUTEX_ID_SYSTEM, wait_ms, holder_before);
+                    if (wait_ms > 0) hal_report_mutex_wait(PRIORITY_COMM, MUTEX_ID_SYSTEM, wait_ms, holder_before);
 
                     system_enabled = true;
 

@@ -44,6 +44,7 @@ void hal_register_log(hal_log_write_cb_t log_write_callback);
 // Timing
 uint32_t hal_get_tick_ms(void);
 void hal_delay_ms(uint32_t ms);
+uint64_t hal_get_tick_us(void);
 
 // Mutex Wait Reporting (Group B priority inversion instrumentation)
 // reports how long task_id waited to acquire mutex_id, and which

@@ -19,12 +19,26 @@ public:
     priority_inversion_seq* prio_seq;
 
     priority_inversion_test(uvm::uvm_component_name name = "priority_inversion_test")
-        : base_test(name), prio_seq(nullptr) {}
+        : base_test(name), prio_seq(nullptr) {
+            // enable core-pinning for logger/alarm/comm tasks — only
+            // this test triggers it, race_condition_test/protected_test unaffected.
+            dut_bridge_detail::pin_priority_inversion_tasks() = true;
+        }
 
+    // DEPOIS
+    void build_phase(uvm::uvm_phase& phase) override {
+        base_test::build_phase(phase);
+        // NEW: set BEFORE run_phase — dut_bridge's run_phase (sibling
+        // component) races with this test's run_phase otherwise.
+        dut_bridge_detail::pin_priority_inversion_tasks() = true;
+    }
+    
     void run_phase(uvm::uvm_phase& phase) override {
         phase.raise_objection(this, "priority_inversion_test starting");
 
-        UVM_INFO("PIT", "Priority inversion test (group B — mutex wait measurement)", uvm::UVM_LOW);
+        
+
+        UVM_INFO("PIT", "Priority inversion test (group B — mutex wait measurement - core-pinned)", uvm::UVM_LOW);
 
         prio_seq = priority_inversion_seq::type_id::create("prio_seq", this);
         prio_seq->start(m_env->sensor_agt->sequencer);
