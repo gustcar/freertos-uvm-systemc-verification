@@ -15,6 +15,7 @@ static hal_gpio_read_cb_t    gpio_read_cb   = NULL;
 static hal_uart_rx_cb_t      uart_cb        = NULL;
 static hal_log_write_cb_t    log_write_cb   = NULL;
 static hal_mutex_wait_cb_t   mutex_wait_cb  = NULL;
+static hal_control_inputs_cb_t control_inputs_cb = NULL;
 
 static sim_mode_t current_mode = MODE_NORMAL;
 
@@ -36,6 +37,7 @@ void hal_init(sim_mode_t mode) {
     uart_cb         = NULL;
     log_write_cb    = NULL;
     mutex_wait_cb   = NULL;
+    control_inputs_cb = NULL;
 
     pthread_mutex_lock(&holder_table_lock);
     for (int i = 0; i < HAL_MUTEX_COUNT; i++) mutex_holder[i] = (unsigned int)-1;
@@ -61,6 +63,9 @@ void hal_register_log(hal_log_write_cb_t callback) {
 }
 void hal_register_mutex_wait(hal_mutex_wait_cb_t callback) {
     mutex_wait_cb = callback;
+}
+void hal_register_control_inputs(hal_control_inputs_cb_t callback) {
+    control_inputs_cb = callback;
 }
 
 // ADC: returns simulated sensor values
@@ -185,6 +190,14 @@ void hal_report_mutex_wait(unsigned int task_id, unsigned int mutex_id, uint32_t
         return;
     }
     /* Default POSIX stub: no-op — standalone Group B build ignores this */
+}
+
+void hal_report_control_inputs(float temperature, float humidity, float target) {
+    if (control_inputs_cb) {
+        control_inputs_cb(temperature, humidity, target);
+        return;
+    }
+    /* Default POSIX stub: no-op — standalone builds ignore this */
 }
 
 void hal_mutex_mark_acquired(unsigned int mutex_id, unsigned int task_id) {

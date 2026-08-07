@@ -61,5 +61,16 @@ void hal_mutex_mark_acquired(unsigned int mutex_id, unsigned int task_id);
 void hal_mutex_mark_released(unsigned int mutex_id);
 unsigned int hal_mutex_current_holder(unsigned int mutex_id);
 
+// Control input coherence instrumentation (torn-read exposure)
+// control_task reports the (temperature, humidity, target) triple it
+// actually consumed in one control iteration, so the testbench can verify
+// the values were mutually coherent — i.e. that (temperature, humidity)
+// came from a single sensor reading rather than a torn read across two.
+// Group A (unprotected) can report incoherent triples; Group B (mutex) can't.
+void hal_report_control_inputs(float temperature, float humidity, float target);
+// Used by UVM-SystemC
+typedef void (*hal_control_inputs_cb_t)(float temperature, float humidity, float target);
+void hal_register_control_inputs(hal_control_inputs_cb_t control_inputs_callback);
+
 
 #endif

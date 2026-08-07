@@ -62,6 +62,12 @@ void control_task_safe(void) {
         hal_mutex_mark_released(MUTEX_ID_TARGET_TEMP);
         pthread_mutex_unlock(&mutex_target_temp);
 
+        // Report the exact triple this iteration consumed. Because the reads
+        // above were mutex-protected, (temperature, humidity) always come from
+        // a single coherent sensor reading — the testbench should see no
+        // incoherent triples here (contrast with Group A).
+        hal_report_control_inputs(current_temp, current_humidity, target_temperature);
+
         // Control logic
         error = current_temp - target_temperature;
 

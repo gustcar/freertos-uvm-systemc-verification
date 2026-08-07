@@ -14,6 +14,7 @@
 #include "../coverage/coverage_bins.h"
 #include "../hal_bridge/dut_bridge.h"
 #include "../agents/mutex_wait_agent/mutex_wait_agent.h"
+#include "../agents/control_input_agent/control_input_agent.h"
 
 class env : public uvm::uvm_env {
 public:
@@ -23,6 +24,7 @@ public:
     comm_agent*         comm_agt;
     actuator_agent*     actuator_agt;
     mutex_wait_agent*   mutex_wait_agt;
+    control_input_agent* control_input_agt;
     concurrency_sb*     scoreboard;
     coverage_bins*      cov;
     dut_bridge*         bridge;
@@ -33,6 +35,7 @@ public:
           comm_agt(nullptr),
           actuator_agt(nullptr),
           mutex_wait_agt(nullptr),
+          control_input_agt(nullptr),
           scoreboard(nullptr),
           cov(nullptr),
           bridge(nullptr) {}
@@ -43,6 +46,7 @@ public:
         comm_agt     = comm_agent::type_id::create("comm_agt", this);
         actuator_agt = actuator_agent::type_id::create("actuator_agt", this);
         mutex_wait_agt = mutex_wait_agent::type_id::create("mutex_wait_agt", this);
+        control_input_agt = control_input_agent::type_id::create("control_input_agt", this);
         scoreboard   = concurrency_sb::type_id::create("scoreboard", this);
         cov          = coverage_bins::type_id::create("cov", this);
         bridge       = dut_bridge::type_id::create("bridge", this);
@@ -58,6 +62,8 @@ public:
         // connect comm monitor to scoreboard
         comm_agt->monitor->analysis_port.connect(scoreboard->comm_analysis_export);
         mutex_wait_agt->monitor->analysis_port.connect(scoreboard->mutex_wait_analysis_export);
+        // connect control-input monitor to scoreboard (torn-read coherence)
+        control_input_agt->monitor->analysis_port.connect(scoreboard->control_input_analysis_export);
         // connect sensor monitor to coverage collector
         sensor_agt->monitor->analysis_port.connect(cov->sensor_analysis_export);
         // connect actuator monitor to coverage collector
@@ -67,7 +73,8 @@ public:
             sensor_agt->monitor,
             actuator_agt->monitor,
             comm_agt->monitor,
-            mutex_wait_agt->monitor
+            mutex_wait_agt->monitor,
+            control_input_agt->monitor
         );
     }
 };

@@ -11,6 +11,7 @@
 #include "../agents/actuator_agent/actuator_monitor.h"
 #include "../agents/comm_agent/comm_monitor.h"
 #include "../agents/mutex_wait_agent/mutex_wait_monitor.h"
+#include "../agents/control_input_agent/control_input_monitor.h"
 
 extern "C" {
 #include "config.h"
@@ -23,7 +24,7 @@ extern float drv_humidity;
 extern unsigned int dvr_command_type;
 extern float dvr_command_value;
 
-enum class hal_event_type { SENSOR, PWM, GPIO, COMM, MUTEX_WAIT };
+enum class hal_event_type { SENSOR, PWM, GPIO, COMM, MUTEX_WAIT, CONTROL_IN };
 
 struct hal_event {
     hal_event_type type;
@@ -36,6 +37,7 @@ struct hal_event {
     unsigned int mutex_id = 0;
     unsigned int mutex_wait_ms = 0;
     unsigned int mutex_holder_task_id = 0;
+    float control_target = 0.0f;   // CONTROL_IN: setpoint control_task consumed
 };
 
 // Thread-safe hand-off: DUT pthreads (producers) -> SystemC thread (consumer)
@@ -47,8 +49,10 @@ public:
         queue().push_back(ev);
     }
 
-    static void set_monitors(sensor_monitor* s, actuator_monitor* a, comm_monitor* c, mutex_wait_monitor* m) {
+    static void set_monitors(sensor_monitor* s, actuator_monitor* a, comm_monitor* c,
+                             mutex_wait_monitor* m, control_input_monitor* ci) {
         sensor_mon() = s; actuator_mon() = a; comm_mon() = c; mutex_wait_mon() = m;
+        control_input_mon() = ci;
     }
 
     // Called ONLY from the SystemC thread (dut_bridge run_phase)
@@ -94,6 +98,16 @@ public:
                             ev.mutex_holder_task_id
                         );
                     break;
+                case hal_event_type::CONTROL_IN:
+                    if (control_input_mon())
+                        control_input_mon()->sample_and_send(
+                            ev.temperature,
+                            ev.humidity,
+                            ev.control_target,
+                            ev.sequence_id,
+                            ev.task_id
+                        );
+                    break;
             }
         }
     }
@@ -103,7 +117,41 @@ public:
         return n;
     }
 
+    // ---- TB -> DUT sensor stimulus buffer ----
+    // The UVM sequence produces sensor values in a sim-time burst, but the DUT
+    // reads the ADC in real time; without buffering the DUT only ever catches a
+    // handful of distinct values before the sequence freezes. This bounded FIFO
+    // decouples the two rates: the driver enqueues every (temp, humidity) pair,
+    // the DUT ADC callback dequeues one fresh coherent pair per read, so all
+    // stimulus variance actually reaches sensor_data (enabling real torn reads).
+    struct stim_pair { float temperature; float humidity; };
+
+    static void push_stimulus(float temperature, float humidity) {
+        std::lock_guard<std::mutex> lk(stim_mutex());
+        stim_queue().push_back({temperature, humidity});
+    }
+
+    // Returns true and fills out params if a fresh pair was available.
+    static bool pop_stimulus(float& temperature, float& humidity) {
+        std::lock_guard<std::mutex> lk(stim_mutex());
+        if (stim_queue().empty()) return false;
+        stim_pair p = stim_queue().front();
+        stim_queue().pop_front();
+        temperature = p.temperature;
+        humidity    = p.humidity;
+        return true;
+    }
+
 private:
+    static std::mutex& stim_mutex() {
+        static std::mutex m;
+        return m;
+    }
+    static std::deque<stim_pair>& stim_queue() {
+        static std::deque<stim_pair> q;
+        return q;
+    }
+
     static std::mutex& get_mutex() {
         static std::mutex m;
         return m;
@@ -132,25 +180,43 @@ private:
         static mutex_wait_monitor* p = nullptr;
         return p;
     }
+    static control_input_monitor*& control_input_mon() {
+        static control_input_monitor* p = nullptr;
+        return p;
+    }
 };
 
 // ---- HAL callback bridge functions (C linkage — match hal.h typedefs exactly) ----
 // Called from DUT pthreads. MUST NOT touch UVM/SystemC directly — only push to the queue.
 
 extern "C" inline float hal_bridge_adc_read(uint8_t channel) {
-    static thread_local float last_temp = 0.0f;   // only sensor_task calls the ADC
+    // Only sensor_task calls the ADC. It reads TEMP then HUMIDITY per iteration,
+    // so on the TEMP read we dequeue ONE fresh stimulus pair and hold it; the
+    // HUMIDITY read returns the humidity from that same pair. This keeps the
+    // pair coherent at the source (a torn read can only arise later, in the
+    // DUT's own unprotected control_task read of sensor_data).
+    static thread_local float last_temp = 25.0f;
+    static thread_local float last_humidity = 50.0f;
+
     if (channel == ADC_CH_TEMP) {
-        last_temp = drv_temperature;
+        float t, h;
+        if (hal_bridge::pop_stimulus(t, h)) {   // fresh pair available
+            last_temp = t;
+            last_humidity = h;
+        } else {                                 // queue drained — hold last / fall back to driver globals
+            last_temp = drv_temperature;
+            last_humidity = drv_humidity;
+        }
         return last_temp;
     }
-    float humidity = drv_humidity;
+
     hal_event ev;
     ev.type = hal_event_type::SENSOR;
     ev.temperature = last_temp;
-    ev.humidity = humidity;
+    ev.humidity = last_humidity;
     ev.task_id = PRIORITY_SENSOR;
     hal_bridge::push(ev);
-    return humidity;
+    return last_humidity;
 }
 
 extern "C" inline void hal_bridge_pwm_set(uint8_t channel, uint8_t duty_percent) {
@@ -209,6 +275,17 @@ extern "C" inline void hal_bridge_mutex_wait(unsigned int task_id, unsigned int 
     ev.mutex_id = mutex_id;
     ev.mutex_wait_ms = wait_ms;
     ev.mutex_holder_task_id = holder_task_id;
+    hal_bridge::push(ev);
+}
+
+// bridges hal_report_control_inputs() into the HAL event queue
+extern "C" inline void hal_bridge_control_inputs(float temperature, float humidity, float target) {
+    hal_event ev;
+    ev.type = hal_event_type::CONTROL_IN;
+    ev.temperature = temperature;
+    ev.humidity = humidity;
+    ev.control_target = target;
+    ev.task_id = PRIORITY_CONTROL;
     hal_bridge::push(ev);
 }
 

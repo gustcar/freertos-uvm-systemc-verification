@@ -9,6 +9,7 @@
 #include <systemc>
 #include <uvm>
 #include "sensor_seq_item.h"
+#include "../../hal_bridge/hal_bridge.h"
 
 // Globals the HAL adc callback reads
 extern float drv_temperature;
@@ -37,6 +38,10 @@ public:
 
             drv_temperature = seq_item.temperature;
             drv_humidity = seq_item.humidity;
+            // Enqueue for the DUT ADC callback to consume one-per-read, so every
+            // stimulus value reaches sensor_data in real time (not just the few
+            // the DUT happens to catch before the sim-time burst freezes).
+            hal_bridge::push_stimulus(seq_item.temperature, seq_item.humidity);
             this->seq_item_port->item_done();
         }
     }
