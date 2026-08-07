@@ -46,6 +46,15 @@ uint32_t hal_get_tick_ms(void);
 void hal_delay_ms(uint32_t ms);
 uint64_t hal_get_tick_us(void);
 
+// Simulated-time bridge (UVM-SystemC co-simulation)
+// The SystemC thread publishes the current simulated time each drain cycle via
+// hal_set_sim_time_ns(); DUT threads read it via hal_get_sim_time_ns() to stamp
+// events with a CONSISTENT clock (fixes the timing checker, which previously
+// mixed sequence_id with sim-time). In standalone POSIX builds nothing sets it,
+// so hal_get_sim_time_ns() simply returns 0 — no SystemC dependency.
+uint64_t hal_get_sim_time_ns(void);
+void hal_set_sim_time_ns(uint64_t sim_time_ns);
+
 // Mutex Wait Reporting (Group B priority inversion instrumentation)
 // reports how long task_id waited to acquire mutex_id, and which
 // task held it just before the lock attempt (best-effort snapshot —
@@ -60,6 +69,17 @@ void hal_register_mutex_wait(hal_mutex_wait_cb_t mutex_wait_callback);
 void hal_mutex_mark_acquired(unsigned int mutex_id, unsigned int task_id);
 void hal_mutex_mark_released(unsigned int mutex_id);
 unsigned int hal_mutex_current_holder(unsigned int mutex_id);
+
+// Control input coherence instrumentation (torn-read exposure)
+// control_task reports the (temperature, humidity, target) triple it
+// actually consumed in one control iteration, so the testbench can verify
+// the values were mutually coherent — i.e. that (temperature, humidity)
+// came from a single sensor reading rather than a torn read across two.
+// Group A (unprotected) can report incoherent triples; Group B (mutex) can't.
+void hal_report_control_inputs(float temperature, float humidity, float target);
+// Used by UVM-SystemC
+typedef void (*hal_control_inputs_cb_t)(float temperature, float humidity, float target);
+void hal_register_control_inputs(hal_control_inputs_cb_t control_inputs_callback);
 
 
 #endif

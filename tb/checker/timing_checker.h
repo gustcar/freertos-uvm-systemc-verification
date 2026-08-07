@@ -75,7 +75,7 @@ public:
         (void)phase;
         UVM_INFO("TIMING",
                  "Alarm Latency Report: max=" + std::to_string(max_latency_ms) +
-                 " ms, samples=" + std::to_string(samples) +
+                 " ns (sim-time), samples=" + std::to_string(samples) +
                  ", pending_unmatched=" + std::to_string(pending_crossings),
                  uvm::UVM_LOW);
     }

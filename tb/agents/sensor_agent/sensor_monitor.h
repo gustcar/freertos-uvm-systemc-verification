@@ -28,13 +28,14 @@ public:
         // Passive observer — no objection needed
     }
 
-    void sample_and_send(float temperature, float humidity, unsigned int timestamp_ns = 0, int task_priority = 0, unsigned int task_id =0) {
+    void sample_and_send(float temperature, float humidity, unsigned int timestamp_ns = 0, int task_priority = 0, unsigned int task_id =0, unsigned int sim_time_ns = 0) {
         sensor_seq_item* seq_item = sensor_seq_item::type_id::create("sensor_sample");
         seq_item->temperature = temperature;
         seq_item->humidity = humidity;
         seq_item->timestamp_ns = timestamp_ns;
         seq_item->task_priority = task_priority;
         seq_item->task_id = task_id;
+        seq_item->sim_time_ns = sim_time_ns;
 
         UVM_INFO(
             "MON",

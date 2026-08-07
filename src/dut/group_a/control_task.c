@@ -31,6 +31,11 @@ void control_task(void) {
         // Can be concurrently modified by comm_task
         target_setpoint = target_temp;
 
+        // Report the exact triple this iteration consumed so the testbench can
+        // verify (temperature, humidity) came from a single coherent sensor
+        // reading. Unprotected here — a torn read yields an incoherent triple.
+        hal_report_control_inputs(current_temperature, current_humidity, target_setpoint);
+
         // Control logic
         error = current_temperature - target_setpoint;
 

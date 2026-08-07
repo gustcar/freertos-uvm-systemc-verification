@@ -62,6 +62,7 @@ public:
         hal_register_uart(hal_bridge_uart_rx);
         hal_register_log(hal_bridge_log_write);
         hal_register_mutex_wait(hal_bridge_mutex_wait);
+        hal_register_control_inputs(hal_bridge_control_inputs);
     }
 
     void run_phase(uvm::uvm_phase& phase) override {
@@ -128,11 +129,20 @@ public:
         // Poll the HAL event queue while DUT threads are alive; forward to monitors
         // from inside the SystemC thread only.
         while (hal_bridge::active_dut_threads() > 0) {
+            // Publish current simulated time so DUT threads can stamp events
+            // with a consistent clock (read via hal_get_sim_time_ns). No gate /
+            // blocking — purely informational, so no deadlock risk.
+            hal_set_sim_time_ns(
+                static_cast<uint64_t>(sc_core::sc_time_stamp().to_seconds() * 1e9)
+            );
             hal_bridge::drain_to_monitors(
                 static_cast<unsigned int>(sc_core::sc_time_stamp().to_seconds() * 1e9)
             );
             sc_core::wait(1, sc_core::SC_MS);
         }
+        hal_set_sim_time_ns(
+            static_cast<uint64_t>(sc_core::sc_time_stamp().to_seconds() * 1e9)
+        );
         hal_bridge::drain_to_monitors(
             static_cast<unsigned int>(sc_core::sc_time_stamp().to_seconds() * 1e9)
         );

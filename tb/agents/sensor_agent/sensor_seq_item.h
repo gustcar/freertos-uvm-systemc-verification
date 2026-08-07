@@ -18,6 +18,7 @@ public:
     unsigned int timestamp_ns;
     int task_priority;
     unsigned int task_id;
+    unsigned int sim_time_ns;   // consistent simulated-time stamp (timing checker)
 
     sensor_seq_item(std::string name = "sensor_seq_item")
         : uvm::uvm_sequence_item(name),
@@ -25,7 +26,8 @@ public:
           humidity(50.0f),
           timestamp_ns(0),
           task_priority(0),
-          task_id(0) {}
+          task_id(0),
+          sim_time_ns(0) {}
 
     virtual void do_copy(const uvm::uvm_object& rhs) override {
         uvm::uvm_sequence_item::do_copy(rhs);
@@ -35,6 +37,7 @@ public:
             timestamp_ns = item.timestamp_ns;
             task_priority = item.task_priority;
             task_id = item.task_id;
+            sim_time_ns = item.sim_time_ns;
     }
 
     virtual bool do_compare(const uvm::uvm_object& rhs, const uvm::uvm_comparer* comparer = nullptr) const override {

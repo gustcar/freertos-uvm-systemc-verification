@@ -18,6 +18,7 @@ public:
     bool         gpio_state;
     unsigned int task_id;
     unsigned int sequence_id;
+    unsigned int sim_time_ns;   // consistent simulated-time stamp (timing checker)
 
     actuator_seq_item(std::string name = "actuator_seq_item")
         : uvm::uvm_sequence_item(name),
@@ -27,7 +28,8 @@ public:
           gpio_pin(0),
           gpio_state(false),
           task_id(0),
-          sequence_id(0) {}
+          sequence_id(0),
+          sim_time_ns(0) {}
     
     std::string convert2string() const override {
         if(type == PWM) {
@@ -48,6 +50,7 @@ public:
         gpio_state = item.gpio_state;
         task_id = item.task_id;
         sequence_id = item.sequence_id;
+        sim_time_ns = item.sim_time_ns;
     }
 
     virtual bool do_compare(const uvm::uvm_object& rhs, const uvm::uvm_comparer* comparer = nullptr) const override {
