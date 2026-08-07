@@ -12,6 +12,7 @@
 #include "../agents/comm_agent/comm_monitor.h"
 #include "../agents/mutex_wait_agent/mutex_wait_monitor.h"
 #include "../agents/control_input_agent/control_input_monitor.h"
+#include "../agents/logger_agent/logger_monitor.h"
 
 extern "C" {
 #include "config.h"
@@ -25,7 +26,7 @@ extern float drv_humidity;
 extern unsigned int dvr_command_type;
 extern float dvr_command_value;
 
-enum class hal_event_type { SENSOR, PWM, GPIO, COMM, MUTEX_WAIT, CONTROL_IN };
+enum class hal_event_type { SENSOR, PWM, GPIO, COMM, MUTEX_WAIT, CONTROL_IN, LOG };
 
 struct hal_event {
     hal_event_type type;
@@ -53,9 +54,9 @@ public:
     }
 
     static void set_monitors(sensor_monitor* s, actuator_monitor* a, comm_monitor* c,
-                             mutex_wait_monitor* m, control_input_monitor* ci) {
+                             mutex_wait_monitor* m, control_input_monitor* ci, logger_monitor* lg) {
         sensor_mon() = s; actuator_mon() = a; comm_mon() = c; mutex_wait_mon() = m;
-        control_input_mon() = ci;
+        control_input_mon() = ci; logger_mon() = lg;
     }
 
     // Called ONLY from the SystemC thread (dut_bridge run_phase)
@@ -112,6 +113,10 @@ public:
                             ev.sequence_id,
                             ev.task_id
                         );
+                    break;
+                case hal_event_type::LOG:
+                    if (logger_mon())
+                        logger_mon()->sample_and_send(ev.task_id, ev.sequence_id);
                     break;
             }
         }
@@ -187,6 +192,10 @@ private:
     }
     static control_input_monitor*& control_input_mon() {
         static control_input_monitor* p = nullptr;
+        return p;
+    }
+    static logger_monitor*& logger_mon() {
+        static logger_monitor* p = nullptr;
         return p;
     }
 };
@@ -267,7 +276,13 @@ extern "C" inline int hal_bridge_uart_rx(uint8_t* buf, uint16_t len) {
 }
 
 extern "C" inline int hal_bridge_log_write(const char* data, uint16_t len) {
-    std::fwrite(data, 1, len, stdout);   // pass-through; logger activity is out of TB scope
+    std::fwrite(data, 1, len, stdout);   // pass-through logger output
+    // Emit a liveness heartbeat so the deadlock detector tracks logger_task
+    // (task 5/5). logger_task produces no other observable event.
+    hal_event ev;
+    ev.type = hal_event_type::LOG;
+    ev.task_id = PRIORITY_LOGGER;
+    hal_bridge::push(ev);
     return static_cast<int>(len);
 }
 
