@@ -26,6 +26,10 @@ public:
     std::map<unsigned int, unsigned int> heartbeat_count;
     // tasks already flagged as stalled (sticky until reset)
     std::set<unsigned int> stalled_tasks;
+    // tasks that completed their work and exited normally — excluded from
+    // stall checks so a finished task's trailing silence is not mistaken for
+    // a deadlock (fed by dut_bridge when each DUT thread returns)
+    std::set<unsigned int> finished_tasks;
 
     deadlock_detector(uvm::uvm_component_name name = "deadlock_detector")
         : uvm::uvm_component(name),
@@ -57,6 +61,20 @@ public:
         }
     }
 
+    // Called by the scoreboard when a DUT task completes normally (thread
+    // returned). A finished task is expected to go silent, so it is removed
+    // from stall consideration — this is what distinguishes completion from
+    // a genuine mid-run deadlock.
+    void mark_finished(unsigned int task_id) {
+        finished_tasks.insert(task_id);
+        // A completion is authoritative proof the task was alive, so clear any
+        // earlier (false) stall flag for it.
+        stalled_tasks.erase(task_id);
+        UVM_INFO("DEADLOCK",
+                 "Task " + std::to_string(task_id) + " finished (excluded from stall checks)",
+                 uvm::UVM_MEDIUM);
+    }
+
     // Called after heartbeat (or from a periodic check if you add one)
     void check(unsigned int current_ns) {
         unsigned int current_ms = current_ns / 1000000u;
@@ -64,6 +82,10 @@ public:
         for (const auto& kv : last_heartbeat_ms) {
             unsigned int task_id = kv.first;
             unsigned int last_ms = kv.second;
+
+            // Finished tasks are expected to be silent — never a deadlock.
+            if (finished_tasks.count(task_id))
+                continue;
 
             // Safe delta (ignore inverted timestamps)
             if (current_ms < last_ms)
@@ -90,6 +112,7 @@ public:
         last_heartbeat_ms.clear();
         heartbeat_count.clear();
         stalled_tasks.clear();
+        finished_tasks.clear();
         total_heartbeats = 0;
     }
 
@@ -112,10 +135,11 @@ public:
         for (const auto& kv : last_heartbeat_ms) {
             unsigned int task_id = kv.first;
             unsigned int idle_ms = (now_ms >= kv.second) ? (now_ms - kv.second) : 0u;
+            std::string state = finished_tasks.count(task_id) ? " (finished)" : "";
             UVM_INFO("DEADLOCK_DETECTOR",
                      "  task " + std::to_string(task_id) +
                      ": " + std::to_string(heartbeat_count[task_id]) +
-                     " heartbeats, trailing idle=" + std::to_string(idle_ms) + " ms",
+                     " heartbeats, trailing idle=" + std::to_string(idle_ms) + " ms" + state,
                      uvm::UVM_LOW);
         }
 

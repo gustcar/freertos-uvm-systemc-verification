@@ -74,27 +74,30 @@ public:
 #endif
         shared_data_reset();
 
-        struct task_entry { const char* name; void (*fn)(void); };
+        // task_id = the priority value the HAL callbacks tag events with, so
+        // the completion signal matches the heartbeat key in the detector.
+        struct task_entry { const char* name; void (*fn)(void); unsigned int task_id; };
 #if defined(DUT_GROUP_A)
         task_entry tasks[5] = {
-            {"alarm_task",   alarm_task},
-            {"sensor_task",  sensor_task},
-            {"control_task", control_task},
-            {"comm_task",    comm_task},
-            {"logger_task",  logger_task},
+            {"alarm_task",   alarm_task,   PRIORITY_ALARM},
+            {"sensor_task",  sensor_task,  PRIORITY_SENSOR},
+            {"control_task", control_task, PRIORITY_CONTROL},
+            {"comm_task",    comm_task,    PRIORITY_COMM},
+            {"logger_task",  logger_task,  PRIORITY_LOGGER},
         };
 #else
         task_entry tasks[5] = {
-            {"alarm_task_safe",   alarm_task_safe},
-            {"sensor_task_safe",  sensor_task_safe},
-            {"control_task_safe", control_task_safe},
-            {"comm_task_safe",    comm_task_safe},
-            {"logger_task_safe",  logger_task_safe},
+            {"alarm_task_safe",   alarm_task_safe,   PRIORITY_ALARM},
+            {"sensor_task_safe",  sensor_task_safe,  PRIORITY_SENSOR},
+            {"control_task_safe", control_task_safe, PRIORITY_CONTROL},
+            {"comm_task_safe",    comm_task_safe,    PRIORITY_COMM},
+            {"logger_task_safe",  logger_task_safe,  PRIORITY_LOGGER},
         };
 #endif
         static void (*task_functions[5])(void);
+        static unsigned int task_ids[5];
         pthread_t threads[5];
-        for (int i = 0; i < 5; ++i) task_functions[i] = tasks[i].fn;
+        for (int i = 0; i < 5; ++i) { task_functions[i] = tasks[i].fn; task_ids[i] = tasks[i].task_id; }
 
         for (int i = 0; i < 5; ++i) {
             hal_bridge::active_dut_threads()++;
@@ -104,6 +107,12 @@ public:
                 [](void* arg) -> void* {
                     int idx = static_cast<int>(reinterpret_cast<intptr_t>(arg));
                     task_functions[idx]();
+                    // Task completed normally — signal the detector (via the
+                    // thread-safe queue) so it is excluded from stall checks.
+                    hal_event done;
+                    done.type = hal_event_type::TASK_DONE;
+                    done.task_id = task_ids[idx];
+                    hal_bridge::push(done);
                     hal_bridge::active_dut_threads()--;
                     return nullptr;
                 },
