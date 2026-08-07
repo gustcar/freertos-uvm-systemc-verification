@@ -1,3 +1,11 @@
+// ============================================================
+// alarm_task.c — Alarm evaluation task (Group A: vulnerable)
+// Priority: 4 (highest)
+// Writes: alarm_state, alarm LED (GPIO)
+// Reads: sensor_data.temperature, sensor_data.humidity
+// Protection: NONE (Group A — vulnerable)
+// ============================================================
+
 #include <stdint.h>
 #include <stdlib.h>
 #include "config.h"

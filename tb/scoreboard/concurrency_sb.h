@@ -23,6 +23,7 @@
 #include "../checker/deadlock_detector.h"
 #include "../agents/mutex_wait_agent/mutex_wait_item.h"
 #include "../agents/control_input_agent/control_input_item.h"
+#include "../agents/logger_agent/logger_heartbeat_item.h"
 #include "../checker/priority_inversion_checker.h"
 
 extern "C" {
@@ -48,6 +49,7 @@ public:
     uvm::uvm_analysis_imp<comm_seq_item*, concurrency_sb>         comm_analysis_export;
     uvm::uvm_analysis_imp<mutex_wait_item*, concurrency_sb> mutex_wait_analysis_export;
     uvm::uvm_analysis_imp<control_input_item*, concurrency_sb> control_input_analysis_export;
+    uvm::uvm_analysis_imp<logger_heartbeat_item*, concurrency_sb> logger_analysis_export;
 
     data_integrity_checker* data_integrity_chk;
     timing_checker*         timing_chk;
@@ -66,6 +68,7 @@ public:
           comm_analysis_export("comm_analysis_export", this),
           mutex_wait_analysis_export("mutex_wait_analisys_export", this),
           control_input_analysis_export("control_input_analysis_export", this),
+          logger_analysis_export("logger_analysis_export", this),
           data_integrity_chk(nullptr),
           timing_chk(nullptr),
           deadlock_chk(nullptr),
@@ -176,6 +179,13 @@ public:
     void write(control_input_item* item) {
         deadlock_chk->heartbeat(item->task_id, item->sequence_id);
         check_control_coherence(item->temperature, item->humidity, item->target);
+    }
+
+    void write(logger_heartbeat_item* item) {
+        // Liveness only — logger_task produces no data to check, but its
+        // heartbeat completes deadlock-detector coverage to all 5 tasks.
+        deadlock_chk->heartbeat(item->task_id, item->sequence_id);
+        deadlock_chk->check(item->sequence_id);
     }
 
     void report_phase(uvm::uvm_phase& phase) override {

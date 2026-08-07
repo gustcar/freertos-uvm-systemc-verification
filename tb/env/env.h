@@ -15,6 +15,7 @@
 #include "../hal_bridge/dut_bridge.h"
 #include "../agents/mutex_wait_agent/mutex_wait_agent.h"
 #include "../agents/control_input_agent/control_input_agent.h"
+#include "../agents/logger_agent/logger_agent.h"
 
 class env : public uvm::uvm_env {
 public:
@@ -25,6 +26,7 @@ public:
     actuator_agent*     actuator_agt;
     mutex_wait_agent*   mutex_wait_agt;
     control_input_agent* control_input_agt;
+    logger_agent*       logger_agt;
     concurrency_sb*     scoreboard;
     coverage_bins*      cov;
     dut_bridge*         bridge;
@@ -36,6 +38,7 @@ public:
           actuator_agt(nullptr),
           mutex_wait_agt(nullptr),
           control_input_agt(nullptr),
+          logger_agt(nullptr),
           scoreboard(nullptr),
           cov(nullptr),
           bridge(nullptr) {}
@@ -47,6 +50,7 @@ public:
         actuator_agt = actuator_agent::type_id::create("actuator_agt", this);
         mutex_wait_agt = mutex_wait_agent::type_id::create("mutex_wait_agt", this);
         control_input_agt = control_input_agent::type_id::create("control_input_agt", this);
+        logger_agt   = logger_agent::type_id::create("logger_agt", this);
         scoreboard   = concurrency_sb::type_id::create("scoreboard", this);
         cov          = coverage_bins::type_id::create("cov", this);
         bridge       = dut_bridge::type_id::create("bridge", this);
@@ -64,6 +68,8 @@ public:
         mutex_wait_agt->monitor->analysis_port.connect(scoreboard->mutex_wait_analysis_export);
         // connect control-input monitor to scoreboard (torn-read coherence)
         control_input_agt->monitor->analysis_port.connect(scoreboard->control_input_analysis_export);
+        // connect logger monitor to scoreboard (deadlock heartbeat, task 5/5)
+        logger_agt->monitor->analysis_port.connect(scoreboard->logger_analysis_export);
         // connect sensor monitor to coverage collector
         sensor_agt->monitor->analysis_port.connect(cov->sensor_analysis_export);
         // connect actuator monitor to coverage collector
@@ -74,7 +80,8 @@ public:
             actuator_agt->monitor,
             comm_agt->monitor,
             mutex_wait_agt->monitor,
-            control_input_agt->monitor
+            control_input_agt->monitor,
+            logger_agt->monitor
         );
     }
 };
