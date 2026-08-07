@@ -46,6 +46,15 @@ uint32_t hal_get_tick_ms(void);
 void hal_delay_ms(uint32_t ms);
 uint64_t hal_get_tick_us(void);
 
+// Simulated-time bridge (UVM-SystemC co-simulation)
+// The SystemC thread publishes the current simulated time each drain cycle via
+// hal_set_sim_time_ns(); DUT threads read it via hal_get_sim_time_ns() to stamp
+// events with a CONSISTENT clock (fixes the timing checker, which previously
+// mixed sequence_id with sim-time). In standalone POSIX builds nothing sets it,
+// so hal_get_sim_time_ns() simply returns 0 — no SystemC dependency.
+uint64_t hal_get_sim_time_ns(void);
+void hal_set_sim_time_ns(uint64_t sim_time_ns);
+
 // Mutex Wait Reporting (Group B priority inversion instrumentation)
 // reports how long task_id waited to acquire mutex_id, and which
 // task held it just before the lock attempt (best-effort snapshot —

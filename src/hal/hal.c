@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdatomic.h>
 
 // Internal callback pointers
 static hal_adc_read_cb_t     adc_cb         = NULL;
@@ -16,6 +17,10 @@ static hal_uart_rx_cb_t      uart_cb        = NULL;
 static hal_log_write_cb_t    log_write_cb   = NULL;
 static hal_mutex_wait_cb_t   mutex_wait_cb  = NULL;
 static hal_control_inputs_cb_t control_inputs_cb = NULL;
+
+// Simulated-time bridge: published by the SystemC thread, read by DUT threads.
+// Lock-free single 64-bit atomic — no blocking, so no deadlock/starvation risk.
+static atomic_uint_least64_t sim_time_ns_atomic = 0;
 
 static sim_mode_t current_mode = MODE_NORMAL;
 
@@ -38,6 +43,7 @@ void hal_init(sim_mode_t mode) {
     log_write_cb    = NULL;
     mutex_wait_cb   = NULL;
     control_inputs_cb = NULL;
+    atomic_store(&sim_time_ns_atomic, 0);
 
     pthread_mutex_lock(&holder_table_lock);
     for (int i = 0; i < HAL_MUTEX_COUNT; i++) mutex_holder[i] = (unsigned int)-1;
@@ -172,6 +178,14 @@ uint64_t hal_get_tick_us(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)(ts.tv_sec * 1000000ULL + ts.tv_nsec / 1000);
+}
+
+uint64_t hal_get_sim_time_ns(void) {
+    return (uint64_t)atomic_load(&sim_time_ns_atomic);
+}
+
+void hal_set_sim_time_ns(uint64_t sim_time_ns) {
+    atomic_store(&sim_time_ns_atomic, (uint_least64_t)sim_time_ns);
 }
 
 // ============================================================

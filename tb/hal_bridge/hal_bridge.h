@@ -16,6 +16,7 @@
 extern "C" {
 #include "config.h"
 #include "types.h"
+#include "hal.h"
 }
 
 // Values driven by the TB sequencers/drivers (defined in sensor_driver.h / comm_driver.h)
@@ -38,6 +39,7 @@ struct hal_event {
     unsigned int mutex_wait_ms = 0;
     unsigned int mutex_holder_task_id = 0;
     float control_target = 0.0f;   // CONTROL_IN: setpoint control_task consumed
+    unsigned int sim_time_ns = 0;  // simulated time at production (from hal_get_sim_time_ns)
 };
 
 // Thread-safe hand-off: DUT pthreads (producers) -> SystemC thread (consumer)
@@ -46,6 +48,7 @@ public:
     static void push(hal_event ev) {
         std::lock_guard<std::mutex> lk(get_mutex());
         ev.sequence_id = next_sequence_id()++;
+        ev.sim_time_ns = static_cast<unsigned int>(hal_get_sim_time_ns());
         queue().push_back(ev);
     }
 
@@ -72,7 +75,8 @@ public:
                             ev.humidity,
                             ev.sequence_id,
                             PRIORITY_SENSOR,
-                            ev.task_id
+                            ev.task_id,
+                            ev.sim_time_ns
                         );
                     break;
                 case hal_event_type::PWM:
@@ -80,11 +84,12 @@ public:
                         ev.pwm_channel,
                         ev.pwm_duty,
                         ev.task_id,
-                        ev.sequence_id
+                        ev.sequence_id,
+                        ev.sim_time_ns
                     );
                     break;
                 case hal_event_type::GPIO:
-                    if (actuator_mon()) actuator_mon()->observe_gpio(ev.gpio_pin, ev.gpio_state, ev.task_id, ev.sequence_id);
+                    if (actuator_mon()) actuator_mon()->observe_gpio(ev.gpio_pin, ev.gpio_state, ev.task_id, ev.sequence_id, ev.sim_time_ns);
                     break;
                 case hal_event_type::COMM:
                     if (comm_mon()) comm_mon()->sample_and_send(ev.command_type, ev.command_value, ev.task_id, ev.sequence_id);

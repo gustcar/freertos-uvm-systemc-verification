@@ -94,8 +94,8 @@ public:
         data_integrity_chk->check_temp_range(item->temperature);
         data_integrity_chk->check_humidity_range(item->humidity);
 
-        // 2. Timing: detect threshold crossing
-        timing_chk->on_sensor(item->temperature, item->timestamp_ns);
+        // 2. Timing: detect threshold crossing (consistent sim-time stamp)
+        timing_chk->on_sensor(item->temperature, item->sim_time_ns);
 
         // 3. Deadlock: heartbeat + check
         deadlock_chk->heartbeat(item->task_id, item->timestamp_ns);
@@ -140,7 +140,7 @@ public:
                 }
             } else if(item->gpio_pin == GPIO_PIN_LED_ALARM) {
                 check_alarm_pair(item->gpio_state);
-                timing_chk->on_actuator_reaction();
+                timing_chk->on_actuator_reaction(item->sim_time_ns);
             }
         }
     }
