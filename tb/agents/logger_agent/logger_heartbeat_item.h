@@ -15,16 +15,21 @@ public:
 
     unsigned int task_id;
     unsigned int sequence_id;
+    // When true, this is a task-completion signal (the task's thread returned),
+    // not a liveness heartbeat — the scoreboard forwards it to the deadlock
+    // detector's mark_finished() so the task is excluded from stall checks.
+    bool finished;
 
     logger_heartbeat_item(std::string name = "logger_heartbeat_item")
         : uvm::uvm_sequence_item(name),
-          task_id(0), sequence_id(0) {}
+          task_id(0), sequence_id(0), finished(false) {}
 
     void do_copy(const uvm::uvm_object& rhs) override {
         uvm::uvm_sequence_item::do_copy(rhs);
         const logger_heartbeat_item& item = dynamic_cast<const logger_heartbeat_item&>(rhs);
         task_id = item.task_id;
         sequence_id = item.sequence_id;
+        finished = item.finished;
     }
 };
 

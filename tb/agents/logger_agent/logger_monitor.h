@@ -33,6 +33,17 @@ public:
 
         analysis_port.write(item);
     }
+
+    // Task-completion signal (any DUT task, not just the logger): reported when
+    // the task's thread returns, so the deadlock detector can exclude it.
+    void sample_finished(unsigned int task_id, unsigned int sequence_id) {
+        logger_heartbeat_item* item = logger_heartbeat_item::type_id::create("task_finished");
+        item->task_id = task_id;
+        item->sequence_id = sequence_id;
+        item->finished = true;
+
+        analysis_port.write(item);
+    }
 };
 
 #endif // LOGGER_MONITOR_H

@@ -183,7 +183,13 @@ public:
     }
 
     void write(logger_heartbeat_item* item) {
-        // Liveness only — logger_task produces no data to check, but its
+        if (item->finished) {
+            // Task-completion signal (any task): exclude it from stall checks
+            // so its trailing silence is not mistaken for a deadlock.
+            deadlock_chk->mark_finished(item->task_id);
+            return;
+        }
+        // Liveness heartbeat — logger_task produces no data to check, but its
         // heartbeat completes deadlock-detector coverage to all 5 tasks.
         deadlock_chk->heartbeat(item->task_id, sim_now_ns());
         deadlock_chk->check(sim_now_ns());

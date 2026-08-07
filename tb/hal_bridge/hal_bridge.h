@@ -26,7 +26,7 @@ extern float drv_humidity;
 extern unsigned int dvr_command_type;
 extern float dvr_command_value;
 
-enum class hal_event_type { SENSOR, PWM, GPIO, COMM, MUTEX_WAIT, CONTROL_IN, LOG };
+enum class hal_event_type { SENSOR, PWM, GPIO, COMM, MUTEX_WAIT, CONTROL_IN, LOG, TASK_DONE };
 
 struct hal_event {
     hal_event_type type;
@@ -117,6 +117,10 @@ public:
                 case hal_event_type::LOG:
                     if (logger_mon())
                         logger_mon()->sample_and_send(ev.task_id, ev.sequence_id);
+                    break;
+                case hal_event_type::TASK_DONE:
+                    if (logger_mon())
+                        logger_mon()->sample_finished(ev.task_id, ev.sequence_id);
                     break;
             }
         }
