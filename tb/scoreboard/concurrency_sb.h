@@ -100,9 +100,10 @@ public:
         // 2. Timing: detect threshold crossing (consistent sim-time stamp)
         timing_chk->on_sensor(item->temperature, item->sim_time_ns);
 
-        // 3. Deadlock: heartbeat + check
-        deadlock_chk->heartbeat(item->task_id, item->timestamp_ns);
-        deadlock_chk->check(item->timestamp_ns);
+        // 3. Deadlock: heartbeat + check (keyed by simulated time, not
+        //    sequence_id, so the stall timeout is a real duration)
+        deadlock_chk->heartbeat(item->task_id, sim_now_ns());
+        deadlock_chk->check(sim_now_ns());
 
         // 4. Reference model: remember this reading for later actuator comparison
         // item->timestamp_ns = sequence_id in hal_bridge.h
@@ -110,8 +111,8 @@ public:
     }
 
     void write(actuator_seq_item* item) {
-        deadlock_chk->heartbeat(item->task_id, item->sequence_id);
-        deadlock_chk->check(item->sequence_id);
+        deadlock_chk->heartbeat(item->task_id, sim_now_ns());
+        deadlock_chk->check(sim_now_ns());
         // PWM range check
         if (item->type == actuator_seq_item::PWM) {
             if (item->pwm_duty_cycle > 100) {
@@ -149,8 +150,8 @@ public:
     }
 
     void write(comm_seq_item* item) {
-        deadlock_chk->heartbeat(item->task_id, item->sequence_id);
-        deadlock_chk->check(item->sequence_id);
+        deadlock_chk->heartbeat(item->task_id, sim_now_ns());
+        deadlock_chk->check(sim_now_ns());
         if (item->command_type == CMD_TARGET || item->command_type == CMD_RESET) {
             modeled_target_temp = (item->command_type == CMD_RESET) ? TEMP_TARGET_DEFAULT : item->command_value;
             UVM_INFO(
@@ -177,15 +178,15 @@ public:
     }
 
     void write(control_input_item* item) {
-        deadlock_chk->heartbeat(item->task_id, item->sequence_id);
+        deadlock_chk->heartbeat(item->task_id, sim_now_ns());
         check_control_coherence(item->temperature, item->humidity, item->target);
     }
 
     void write(logger_heartbeat_item* item) {
         // Liveness only — logger_task produces no data to check, but its
         // heartbeat completes deadlock-detector coverage to all 5 tasks.
-        deadlock_chk->heartbeat(item->task_id, item->sequence_id);
-        deadlock_chk->check(item->sequence_id);
+        deadlock_chk->heartbeat(item->task_id, sim_now_ns());
+        deadlock_chk->check(sim_now_ns());
     }
 
     void report_phase(uvm::uvm_phase& phase) override {
@@ -206,6 +207,12 @@ public:
     }
 
 private:
+    // Current SystemC simulated time in ns. Called at drain time (SC thread),
+    // so it is the consistent clock all deadlock heartbeats/checks are keyed by.
+    static unsigned int sim_now_ns() {
+        return static_cast<unsigned int>(sc_core::sc_time_stamp().to_seconds() * 1e9);
+    }
+
     // Window sized by SAMPLE COUNT, not simulated time — the DUT threads
     // run at real-CPU speed, so many sensor readings can share the same
     // 1ms drain batch. Using sequence_id (real production order) with a

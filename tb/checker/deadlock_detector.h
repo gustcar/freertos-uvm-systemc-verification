@@ -96,16 +96,27 @@ public:
     void report_phase(uvm::uvm_phase& phase) override {
         (void)phase;
 
+        unsigned int now_ms =
+            static_cast<unsigned int>(sc_core::sc_time_stamp().to_seconds() * 1000.0);
+
         UVM_INFO("DEADLOCK_DETECTOR",
                  "Heartbeats total=" + std::to_string(total_heartbeats) +
-                 ", tracked tasks=" + std::to_string(last_heartbeat_ms.size()),
+                 ", tracked tasks=" + std::to_string(last_heartbeat_ms.size()) +
+                 ", sim end=" + std::to_string(now_ms) + " ms, timeout=" +
+                 std::to_string(timeout_ms) + " ms",
                  uvm::UVM_LOW);
 
-        for (const auto& kv : heartbeat_count) {
+        // Per-task trailing idle (how long each task had been silent at sim end).
+        // Useful for picking a meaningful timeout: it must exceed the largest
+        // idle a healthy task legitimately shows (sparse tasks like comm log few).
+        for (const auto& kv : last_heartbeat_ms) {
+            unsigned int task_id = kv.first;
+            unsigned int idle_ms = (now_ms >= kv.second) ? (now_ms - kv.second) : 0u;
             UVM_INFO("DEADLOCK_DETECTOR",
-                     "  task " + std::to_string(kv.first) +
-                     ": " + std::to_string(kv.second) + " heartbeats",
-                     uvm::UVM_MEDIUM);
+                     "  task " + std::to_string(task_id) +
+                     ": " + std::to_string(heartbeat_count[task_id]) +
+                     " heartbeats, trailing idle=" + std::to_string(idle_ms) + " ms",
+                     uvm::UVM_LOW);
         }
 
         if (!stalled_tasks.empty()) {
