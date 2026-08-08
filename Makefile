@@ -163,3 +163,6 @@ stress:
 collect:
 	python3 scripts/collect_results.py
 
+plots:
+	python3 scripts/plot_results.py
+
