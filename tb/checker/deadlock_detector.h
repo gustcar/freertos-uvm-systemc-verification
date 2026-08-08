@@ -18,6 +18,7 @@ public:
     UVM_COMPONENT_UTILS(deadlock_detector)
 
     unsigned int timeout_ms;
+    unsigned int tick_ms;          // period of the silence-probe tick (see run_phase)
     unsigned int total_heartbeats;
 
     // last seen time (ms) per task
@@ -34,6 +35,7 @@ public:
     deadlock_detector(uvm::uvm_component_name name = "deadlock_detector")
         : uvm::uvm_component(name),
           timeout_ms(5000),
+          tick_ms(1),
           total_heartbeats(0) {}
 
     void build_phase(uvm::uvm_phase& phase) override {
@@ -42,6 +44,26 @@ public:
         int t = 0;
         if (uvm::uvm_config_db<int>::get(this, "", "deadlock_timeout_ms", t) && t > 0) {
             timeout_ms = static_cast<unsigned int>(t);
+        }
+        int tk = 0;
+        if (uvm::uvm_config_db<int>::get(this, "", "deadlock_tick_ms", tk) && tk > 0) {
+            tick_ms = static_cast<unsigned int>(tk);
+        }
+    }
+
+    // Periodic silence probe. check() otherwise runs only when the scoreboard
+    // receives an event, so a task (or the whole DUT) that goes completely
+    // silent would never be re-examined and its stall never flagged. This tick
+    // runs check() on a fixed simulated-time cadence so silence is caught too.
+    // No objection is raised, so it never extends the simulation — the process
+    // is killed when the run phase ends.
+    void run_phase(uvm::uvm_phase& phase) override {
+        (void)phase;
+        for (;;) {
+            sc_core::wait(tick_ms, sc_core::SC_MS);
+            unsigned int now_ns =
+                static_cast<unsigned int>(sc_core::sc_time_stamp().to_seconds() * 1e9);
+            check(now_ns);
         }
     }
 

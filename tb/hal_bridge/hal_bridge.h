@@ -26,7 +26,7 @@ extern float drv_humidity;
 extern unsigned int dvr_command_type;
 extern float dvr_command_value;
 
-enum class hal_event_type { SENSOR, PWM, GPIO, COMM, MUTEX_WAIT, CONTROL_IN, LOG, TASK_DONE };
+enum class hal_event_type { SENSOR, PWM, GPIO, COMM, MUTEX_WAIT, CONTROL_IN, LOG, TASK_DONE, HEARTBEAT };
 
 struct hal_event {
     hal_event_type type;
@@ -121,6 +121,15 @@ public:
                 case hal_event_type::TASK_DONE:
                     if (logger_mon())
                         logger_mon()->sample_finished(ev.task_id, ev.sequence_id);
+                    break;
+                case hal_event_type::HEARTBEAT:
+                    // Pure liveness for any task (no observable data of its own):
+                    // reuses the generic logger liveness channel keyed on task_id,
+                    // so the deadlock detector sees the task is still alive. Used
+                    // by sparse producers (comm_task polls the UART every loop but
+                    // only rarely receives a command).
+                    if (logger_mon())
+                        logger_mon()->sample_and_send(ev.task_id, ev.sequence_id);
                     break;
             }
         }
@@ -261,6 +270,19 @@ extern "C" inline bool hal_bridge_gpio_read(uint8_t pin) {
 }
 
 extern "C" inline int hal_bridge_uart_rx(uint8_t* buf, uint16_t len) {
+    // comm_task polls the UART every loop iteration but only rarely receives a
+    // command, so a real COMM event is a sparse liveness signal. Emit a throttled
+    // liveness heartbeat on the poll itself (independent of any command) so the
+    // deadlock detector keeps seeing comm_task as alive between commands — a low
+    // stall timeout can no longer mistake a healthy-but-quiet comm_task for a hang.
+    static thread_local unsigned int poll_count = 0;
+    if ((poll_count++ & 0x3Fu) == 0u) {   // every 64th poll
+        hal_event hb;
+        hb.type = hal_event_type::HEARTBEAT;
+        hb.task_id = PRIORITY_COMM;
+        hal_bridge::push(hb);
+    }
+
     if (dvr_command_type == CMD_NONE || len < sizeof(command_t)) return 0;
 
     command_t cmd;
