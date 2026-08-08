@@ -59,6 +59,10 @@ help:
 	@echo "make build-b  - Compile group B (protected)"
 	@echo "make run-a    - Compile and run group A (vulnerable)"
 	@echo "make run-b    - Compile and run group B (protected)"
+	@echo "make bench    - Run all concurrency microbenchmarks + DUT end-to-end"
+	@echo "make bench-falsesharing - False-sharing cost (cache-line contention)"
+	@echo "make bench-mutex        - Mutex overhead + lost-update race cost"
+	@echo "make bench-dut          - End-to-end DUT wall time (Group A vs B)"
 	@echo "make clean    - Remove build artifacts"
 
 $(BUILD_DIR):
@@ -113,4 +117,38 @@ check-headers:
 		tb/checker/deadlock_detector.h tb/scoreboard/concurrency_sb.h \
 		tb/sequences/base_seq.h tb/sequences/race_condition_seq.h tb/sequences/priority_inversion_seq.h \
 		tb/tests/race_condition_test.h tb/tests/protected_test.h
+
+# --- Concurrency microbenchmarks (report artefacts) ---
+# Isolated experiments that quantify two hazards named in the project:
+#   false sharing (cache-line contention) and mutex overhead. Each isolates
+#   ONE effect so the numbers are clean; the DUT A-vs-B run below is the
+#   authentic-but-confounded end-to-end context.
+BENCH_DIR := src/bench
+
+$(BUILD_DIR)/false_sharing_bench.elf: $(BENCH_DIR)/false_sharing_bench.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
+$(BUILD_DIR)/mutex_overhead_bench.elf: $(BENCH_DIR)/mutex_overhead_bench.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
+.PHONY: bench bench-falsesharing bench-mutex bench-dut
+bench-falsesharing: $(BUILD_DIR)/false_sharing_bench.elf
+	./$(BUILD_DIR)/false_sharing_bench.elf
+
+bench-mutex: $(BUILD_DIR)/mutex_overhead_bench.elf
+	./$(BUILD_DIR)/mutex_overhead_bench.elf
+
+# End-to-end wall time of the real firmware (Group A vs Group B). Contextual
+# only: dominated by the tasks' random hal_delay_ms sleeps and mixes mutex,
+# false-sharing and volatile effects — the clean numbers are the microbenchmarks.
+bench-dut: build-a build-b
+	@echo "=== End-to-end DUT wall time (contextual; dominated by hal_delay_ms sleeps) ==="
+	@for g in a b; do \
+	  for r in 1 2 3; do \
+	    s=$$(date +%s%N); ./$(BUILD_DIR)/group_$$g.elf >/dev/null 2>&1; e=$$(date +%s%N); \
+	    awk "BEGIN{printf \"  group_%s run %d: %.1f ms\\n\", \"$$g\", $$r, ($$e-$$s)/1e6}"; \
+	  done; \
+	done
+
+bench: bench-falsesharing bench-mutex bench-dut
 
