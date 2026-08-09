@@ -76,3 +76,6 @@ test_uvm* 
 .vscode/
 *~
 .DS_Store
+
+# Article-support reference material (working files, not versioned)
+docs/artigo/
