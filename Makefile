@@ -152,3 +152,17 @@ bench-dut: build-a build-b
 
 bench: bench-falsesharing bench-mutex bench-dut
 
+# --- Statistical stress + aggregation (Step 6) ---
+# STRESS_N controls runs per group (each ~seconds; default modest).
+STRESS_N ?= 20
+
+.PHONY: stress collect
+stress:
+	bash scripts/run_stress.sh $(STRESS_N)
+
+collect:
+	python3 scripts/collect_results.py
+
+plots:
+	python3 scripts/plot_results.py
+

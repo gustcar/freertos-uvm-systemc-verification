@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="380" viewBox="0 0 560 380" font-family="sans-serif">
+<rect width="560" height="380" fill="white"/>
+<text x="280" y="26" text-anchor="middle" font-size="18" font-weight="bold" fill="#222222">Mean defects per run — Group A vs B</text>
+<line x1="70" y1="310.0" x2="530" y2="310.0" stroke="#dddddd" stroke-width="1"/>
+<text x="62" y="314.0" text-anchor="end" font-size="11" fill="#222222">0</text>
+<line x1="70" y1="258.0" x2="530" y2="258.0" stroke="#dddddd" stroke-width="1"/>
+<text x="62" y="262.0" text-anchor="end" font-size="11" fill="#222222">3</text>
+<line x1="70" y1="206.0" x2="530" y2="206.0" stroke="#dddddd" stroke-width="1"/>
+<text x="62" y="210.0" text-anchor="end" font-size="11" fill="#222222">5</text>
+<line x1="70" y1="154.0" x2="530" y2="154.0" stroke="#dddddd" stroke-width="1"/>
+<text x="62" y="158.0" text-anchor="end" font-size="11" fill="#222222">8</text>
+<line x1="70" y1="102.0" x2="530" y2="102.0" stroke="#dddddd" stroke-width="1"/>
+<text x="62" y="106.0" text-anchor="end" font-size="11" fill="#222222">11</text>
+<line x1="70" y1="50.0" x2="530" y2="50.0" stroke="#dddddd" stroke-width="1"/>
+<text x="62" y="54.0" text-anchor="end" font-size="11" fill="#222222">13</text>
+<line x1="70" y1="310" x2="530" y2="310" stroke="#333333" stroke-width="1.5"/>
+<line x1="70" y1="50" x2="70" y2="310" stroke="#333333" stroke-width="1.5"/>
+<rect x="123.0" y="136.2" width="60.0" height="173.8" fill="#d1495b"/>
+<text x="153.0" y="130.2" text-anchor="middle" font-size="11" fill="#222222">8.87</text>
+<rect x="187.0" y="310.0" width="60.0" height="0.0" fill="#00798c"/>
+<text x="217.0" y="304.0" text-anchor="middle" font-size="11" fill="#222222">0.00</text>
+<text x="185.0" y="328" text-anchor="middle" font-size="12" fill="#222222">torn reads</text>
+<rect x="353.0" y="83.9" width="60.0" height="226.1" fill="#d1495b"/>
+<text x="383.0" y="77.9" text-anchor="middle" font-size="11" fill="#222222">11.53</text>
+<rect x="417.0" y="309.3" width="60.0" height="0.7" fill="#00798c"/>
+<text x="447.0" y="303.3" text-anchor="middle" font-size="11" fill="#222222">0.03</text>
+<text x="415.0" y="328" text-anchor="middle" font-size="12" fill="#222222">mismatches</text>
+<text x="20" y="180" text-anchor="middle" font-size="12" fill="#222222" transform="rotate(-90 20 180)">mean per run</text>
+<rect x="380" y="50" width="14" height="14" fill="#d1495b"/>
+<text x="400" y="62" font-size="12" fill="#222222">Group A</text>
+<rect x="380" y="70" width="14" height="14" fill="#00798c"/>
+<text x="400" y="82" font-size="12" fill="#222222">Group B</text>
+</svg>
